@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Eldfall Chronicles — Army Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+html.text-lg{font-size:17px}
+
+[data-theme="dark"]{
+  --bg-app:#1a1e24;--bg-left:#1e2229;--bg-right:#22272f;
+  --bg-card-hover:#2a2f38;--bg-card-active:#2e3545;
+  --bg-roster-header:#161b21;--bg-header:#161b21;
+  --border:#333;--border-gold:rgba(180,140,50,0.4);
+  --gold:#c9a84c;--gold-dim:#8b6914;
+  --crimson:#c0392b;--crimson-dim:#7a1c1c;
+  --profane-dim:#6c3483;--stone-light:#5a4f47;
+  --teal:#2a9d8f;--teal-dim:#1a6b60;
+  --text-primary:#e8dfc8;--text-secondary:#9a8f7a;--text-dim:#5a5248;
+  --item-bg:rgba(255,255,255,0.03);--item-border:rgba(255,255,255,0.07);
+  --gold-item-bg:rgba(180,140,50,0.05);--gold-item-border:rgba(180,140,50,0.15);
+  --purple-item-bg:rgba(108,52,131,0.06);--purple-item-border:rgba(108,52,131,0.2);
+  --teal-item-bg:rgba(42,157,143,0.06);--teal-item-border:rgba(42,157,143,0.2);
+  --theme-btn-bg:rgba(255,255,255,0.07);--theme-btn-hover:rgba(255,255,255,0.12);
+}
+[data-theme="light"]{
+  --bg-app:#d8cebc;--bg-left:#f5f0e8;--bg-right:#ede5d5;
+  --bg-card-hover:rgba(139,105,20,0.08);--bg-card-active:#c4b89a;
+  --bg-roster-header:#8a7560;--bg-header:#6b5a45;
+  --border:#c8bba0;--border-gold:rgba(139,105,20,0.5);
+  --gold:#c9a84c;--gold-dim:#8b6914;
+  --crimson:#7a1c1c;--crimson-dim:#7a1c1c;
+  --profane-dim:#6c3483;--stone-light:#5a4f47;
+  --teal:#1a7a6e;--teal-dim:#155f55;
+  --text-primary:#2a1f14;--text-secondary:#4a3728;--text-dim:#8a7560;
+  --item-bg:rgba(42,31,20,0.04);--item-border:rgba(139,105,20,0.2);
+  --gold-item-bg:rgba(139,105,20,0.06);--gold-item-border:rgba(139,105,20,0.3);
+  --purple-item-bg:rgba(108,52,131,0.05);--purple-item-border:rgba(108,52,131,0.25);
+  --teal-item-bg:rgba(42,157,143,0.05);--teal-item-border:rgba(42,157,143,0.25);
+  --theme-btn-bg:rgba(42,31,20,0.1);--theme-btn-hover:rgba(42,31,20,0.18);
+}
+[data-theme="light"] .char-card.active .char-name{color:#2a1f14!important}
+[data-theme="light"] .char-card.active .char-class{color:#5a3a1a!important}
+[data-theme="light"] .char-card.active .attr-val{color:#2a1f14!important}
+[data-theme="light"] .char-card.active .attr-key{color:#6b4c2a!important}
+[data-theme="light"] .char-card.active .char-cost{color:#2a1f14!important;border-color:#6b4c2a!important}
+
+html,body{height:100%;overflow:hidden}
+body{font-family:'Crimson Text',Georgia,serif;background:var(--bg-app);color:var(--text-primary);display:flex;flex-direction:column;transition:background 0.25s,color 0.25s}
+
+.header{background:var(--bg-header);border-bottom:1px solid var(--border-gold);padding:10px 24px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.header-title{font-family:'Cinzel',serif;color:var(--gold);font-size:1.286rem;font-weight:700;letter-spacing:3px}
+.header-faction{font-family:'Cinzel',serif;color:var(--text-secondary);font-size:0.714rem;letter-spacing:1.5px}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.header-pts{font-family:'Cinzel',serif;color:var(--gold);font-size:0.929rem;border:1px solid var(--gold-dim);padding:3px 14px;letter-spacing:1px}
+.theme-btn{background:var(--theme-btn-bg);border:1px solid var(--border-gold);border-radius:20px;padding:4px 12px;cursor:pointer;font-family:'Cinzel',serif;font-size:0.714rem;letter-spacing:1px;color:var(--gold);display:flex;align-items:center;gap:6px;transition:background 0.15s;white-space:nowrap}
+.theme-btn:hover{background:var(--theme-btn-hover)}
+.theme-btn .icon{font-size:0.929rem}
+
+.main{display:flex;flex:1;overflow:hidden}
+
+/* LEFT */
+.roster{width:310px;min-width:260px;background:var(--bg-left);border-right:1px solid var(--border-gold);overflow-y:auto;flex-shrink:0;transition:background 0.25s}
+.roster-header{position:sticky;top:0;z-index:10;background:var(--bg-roster-header);padding:8px 16px;font-family:'Cinzel',serif;font-size:0.643rem;color:var(--gold);letter-spacing:2.5px;text-transform:uppercase;border-bottom:1px solid var(--border-gold)}
+.char-card{position:relative;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;border-left:3px solid transparent}
+.char-card:hover{background:var(--bg-card-hover)}
+.char-card.active{background:var(--bg-card-active);border-left:3px solid var(--gold)}
+.char-card.active .char-name{color:var(--gold)}
+.char-card.active .char-class{color:#a08060}
+.char-card.active .attr-val{color:#d4c090}
+.char-card.active .attr-key{color:#6a5f4a}
+.char-card.active .char-cost{color:var(--gold);border-color:var(--gold-dim)}
+/* Creature card */
+.char-card.creature{border-left:3px solid transparent}
+.char-card.creature.active{border-left:3px solid var(--teal)}
+.char-card.creature .char-name{color:var(--teal)}
+.char-card.creature.active .char-name{color:var(--teal)}
+.char-card.creature .char-class{color:var(--teal);opacity:0.8}
+
+.char-name{font-family:'Cinzel',serif;font-size:0.929rem;font-weight:600;color:var(--text-primary);margin-bottom:2px}
+.char-class{font-size:0.786rem;color:var(--crimson);font-style:italic;margin-bottom:8px;font-weight:600}
+.char-cost{position:absolute;top:14px;right:14px;font-family:'Cinzel',serif;font-size:0.786rem;color:var(--gold-dim);border:1px solid rgba(139,105,20,0.3);padding:1px 6px;border-radius:2px}
+.attrs-row{display:flex;gap:5px;flex-wrap:wrap}
+.attr-cell{display:flex;flex-direction:column;align-items:center;min-width:26px}
+.attr-key{font-size:0.571rem;color:var(--text-dim);font-family:'Cinzel',serif;letter-spacing:0.5px}
+.attr-val{font-size:0.929rem;font-weight:600;color:var(--text-secondary);line-height:1.2}
+
+.divider{width:1px;background:var(--border-gold);flex-shrink:0}
+
+/* RIGHT */
+.detail{flex:1;overflow-y:auto;background:var(--bg-right);transition:background 0.25s}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;opacity:0.25}
+.empty-state p{font-family:'Cinzel',serif;font-size:0.857rem;color:var(--text-primary);letter-spacing:3px}
+.detail-content{padding:24px 32px;max-width:960px}
+
+.detail-name{font-family:'Cinzel',serif;font-size:2.0rem;font-weight:700;color:var(--text-primary);letter-spacing:2px;line-height:1;margin-bottom:8px}
+.detail-name.creature-name{color:var(--teal)}
+.detail-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+.class-badge{font-family:'Cinzel',serif;font-size:0.714rem;letter-spacing:1px;padding:3px 10px;border:1px solid;border-radius:2px}
+.badge-assassin,.badge-rogue{color:var(--crimson);border-color:var(--crimson-dim);background:rgba(192,57,43,0.1)}
+.badge-warrior{color:#c9924c;border-color:#6b4c1c;background:rgba(201,146,76,0.1)}
+.badge-ranger{color:#6ab04c;border-color:#3a6b1c;background:rgba(106,176,76,0.08)}
+.badge-mage,.badge-enchanter,.badge-wizard,.badge-sorcerer,.badge-summoner,.badge-artificer{color:#6a9cd4;border-color:#2a4d8b;background:rgba(106,156,212,0.1)}
+.badge-creature{color:var(--teal);border-color:var(--teal-dim);background:rgba(42,157,143,0.1)}
+.cost-badge{margin-left:auto;font-family:'Cinzel',serif;font-size:0.857rem;color:var(--gold);border:1px solid var(--gold-dim);padding:3px 12px}
+
+.gold-rule{height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:14px 0}
+.section-title{font-family:'Cinzel',serif;font-size:0.714rem;letter-spacing:2.5px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--gold-dim);opacity:0.3}
+.col2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px}
+
+/* Weapon */
+.weapon-card{background:var(--item-bg);border:1px solid var(--item-border);border-left:3px solid var(--crimson-dim);padding:10px 14px;margin-bottom:8px;border-radius:0 4px 4px 0}
+.weapon-name{font-family:'Cinzel',serif;font-size:0.929rem;color:var(--text-primary);font-weight:600;margin-bottom:5px}
+.weapon-mode{display:inline-block;font-size:0.643rem;font-family:'Cinzel',serif;padding:1px 7px;border-radius:2px;margin-bottom:5px;letter-spacing:0.5px}
+.mode-melee{background:rgba(192,57,43,0.15);color:#c0392b;border:1px solid rgba(192,57,43,0.3)}
+.mode-ranged{background:rgba(106,156,212,0.12);color:#6a9cd4;border:1px solid rgba(106,156,212,0.3)}
+.mode-natural{background:rgba(120,160,80,0.12);color:#8ab55a;border:1px solid rgba(120,160,80,0.3)}
+.weapon-stats{display:flex;gap:14px;margin-bottom:5px;flex-wrap:wrap}
+.weapon-stat{font-size:0.857rem;color:var(--text-secondary)}
+.weapon-stat span{color:var(--text-primary);font-weight:600}
+.weapon-effect{font-size:0.857rem;color:var(--text-secondary);font-style:italic;line-height:1.5}
+
+/* Generic items */
+.item-card{padding:9px 13px;background:var(--item-bg);border:1px solid var(--item-border);border-radius:4px;margin-bottom:6px}
+.item-card.gold-left{border-left:3px solid var(--gold-dim);border-radius:0 4px 4px 0;background:var(--gold-item-bg);border-color:var(--gold-item-border)}
+.item-card.crimson-left{border-left:3px solid var(--crimson-dim);border-radius:0 4px 4px 0}
+.item-card.stone-left{border-left:3px solid var(--stone-light);border-radius:0 4px 4px 0}
+.item-card.purple-left{border-left:3px solid var(--profane-dim);border-radius:0 4px 4px 0;background:var(--purple-item-bg);border-color:var(--purple-item-border)}
+.item-card.teal-left{border-left:3px solid var(--teal-dim);border-radius:0 4px 4px 0;background:var(--teal-item-bg);border-color:var(--teal-item-border)}
+.item-label{font-size:0.643rem;font-family:'Cinzel',serif;letter-spacing:1.5px;color:var(--text-dim);margin-bottom:2px;text-transform:uppercase}
+.item-name{font-family:'Cinzel',serif;font-size:0.857rem;color:var(--text-primary);font-weight:600;margin-bottom:3px}
+.item-cost{font-size:0.714rem;color:var(--text-dim);margin-left:4px}
+.item-stats{display:flex;gap:14px;margin-bottom:4px;flex-wrap:wrap;align-items:center}
+.item-stat{font-size:0.786rem;color:var(--text-secondary)}
+.item-stat span{color:var(--text-primary);font-weight:600}
+.item-desc{font-size:0.857rem;color:var(--text-secondary);line-height:1.6}
+
+/* Summon button */
+.summon-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-top:6px;padding:4px 12px;
+  background:rgba(42,157,143,0.15);
+  border:1px solid var(--teal-dim);
+  border-radius:3px;
+  font-family:'Cinzel',serif;font-size:0.643rem;letter-spacing:1px;
+  color:var(--teal);cursor:pointer;transition:background 0.15s;
+}
+.summon-btn:hover{background:rgba(42,157,143,0.28)}
+
+/* Dismiss button */
+.dismiss-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 16px;
+  background:rgba(192,57,43,0.12);
+  border:1px solid var(--crimson-dim);
+  border-radius:3px;
+  font-family:'Cinzel',serif;font-size:0.714rem;letter-spacing:1px;
+  color:var(--crimson);cursor:pointer;transition:background 0.15s;
+}
+.dismiss-btn:hover{background:rgba(192,57,43,0.25)}
+
+/* Element badges */
+.el-badge{font-size:0.643rem;font-family:'Cinzel',serif;padding:1px 5px;border-radius:2px;margin-left:6px;vertical-align:middle}
+.el-fire{background:rgba(192,57,43,0.15);color:#e67e52;border:1px solid rgba(192,57,43,0.3)}
+.el-profane{background:rgba(108,52,131,0.15);color:#b97fd4;border:1px solid rgba(108,52,131,0.3)}
+.el-water{background:rgba(52,152,219,0.12);color:#7ab8d4;border:1px solid rgba(52,152,219,0.25)}
+.el-elder{background:rgba(180,140,50,0.12);color:#c9a84c;border:1px solid rgba(180,140,50,0.25)}
+.el-air{background:rgba(149,204,202,0.12);color:#95ccca;border:1px solid rgba(149,204,202,0.25)}
+.el-earth{background:rgba(120,160,80,0.12);color:#8ab55a;border:1px solid rgba(120,160,80,0.25)}
+.el-divine{background:rgba(240,220,120,0.12);color:#e0cc60;border:1px solid rgba(240,220,120,0.25)}
+.el-any{background:rgba(150,150,150,0.12);color:#aaa;border:1px solid rgba(150,150,150,0.25)}
+
+/* ── ACORDEONES TÁCTILES ── */
+.accordion{
+  border-radius:4px;
+  margin-bottom:6px;
+  overflow:hidden;
+}
+.accordion-trigger{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;padding:12px 14px;
+  background:var(--item-bg);border:1px solid var(--item-border);
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:background 0.15s;
+  border-radius:4px;
+  gap:8px;
+}
+.accordion-trigger:active{background:var(--bg-card-hover)}
+.accordion.open .accordion-trigger{
+  border-radius:4px 4px 0 0;
+  border-bottom-color:transparent;
+}
+.accordion-trigger-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.accordion-chevron{
+  font-size:0.714rem;color:var(--text-dim);
+  transition:transform 0.2s;flex-shrink:0;
+}
+.accordion.open .accordion-chevron{transform:rotate(180deg)}
+.accordion-body{
+  display:none;
+  padding:10px 14px 12px;
+  background:var(--item-bg);
+  border:1px solid var(--item-border);border-top:none;
+  border-radius:0 0 4px 4px;
+  font-size:0.857rem;color:var(--text-secondary);line-height:1.6;
+}
+.accordion.open .accordion-body{display:block}
+
+/* Class badge pulsable */
+.class-badge{
+  font-family:'Cinzel',serif;font-size:0.714rem;letter-spacing:1px;
+  padding:6px 12px;border:1px solid;border-radius:4px;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:opacity 0.15s;user-select:none;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.class-badge:active{opacity:0.7}
+.class-badge .badge-chevron{font-size:0.571rem;transition:transform 0.2s}
+.class-badge.open .badge-chevron{transform:rotate(180deg)}
+
+/* Class description panel */
+.class-desc-panel{
+  display:none;
+  margin-top:4px;margin-bottom:4px;
+  padding:10px 14px;
+  background:var(--item-bg);border:1px solid var(--item-border);
+  border-radius:4px;
+  font-size:0.857rem;color:var(--text-secondary);line-height:1.6;
+}
+.class-desc-panel.open{display:block}
+
+/* Weapon category badge pulsable */
+.weapon-cat{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:0.643rem;font-family:'Cinzel',serif;
+  padding:3px 8px;border-radius:2px;margin-bottom:5px;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  letter-spacing:0.5px;user-select:none;
+  transition:opacity 0.15s;
+}
+.weapon-cat:active{opacity:0.7}
+.weapon-cat .cat-chevron{font-size:0.571rem;transition:transform 0.2s}
+.weapon-cat.open .cat-chevron{transform:rotate(180deg)}
+.cat-desc{
+  display:none;margin-top:4px;margin-bottom:4px;
+  padding:8px 12px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--item-border);border-radius:3px;
+  font-size:0.786rem;color:var(--text-secondary);
+  font-style:italic;line-height:1.5;
+}
+.cat-desc.open{display:block}
+
+.spell-unavailable .item-name::after{content:' · no affinity';font-size:0.643rem;color:var(--text-dim);font-style:italic;font-family:'Crimson Text',serif;font-weight:400;margin-left:4px}
+.no-items{font-size:0.857rem;color:var(--text-dim);font-style:italic;padding:4px 0}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:rgba(128,128,128,0.05)}
+::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:3px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="header-title">⚔ Eldfall Chronicles</div>
+    <div class="header-faction" id="header-faction">Army Viewer</div>
+  </div>
+  <div class="header-right">
+    <div class="header-pts" id="header-pts">— pts</div>
+    <button class="theme-btn" onclick="document.getElementById('army-file-input').click()">
+      <span class="icon">📂</span><span>Load</span>
+    </button>
+    <input type="file" id="army-file-input" accept=".json" style="display:none">
+    <button class="theme-btn" onclick="toggleFont()" id="font-btn"><span class="icon">𝐀</span><span>A+</span></button>
+    <button class="theme-btn" onclick="exportPDF()" id="export-btn"><span class="icon">📄</span><span>PDF</span></button>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn"><span class="icon">☀️</span><span>Light</span></button>
+  </div>
+</div>
+<div class="main">
+  <div class="roster">
+    <div class="roster-header" id="roster-header">Warband</div>
+    <div id="roster-list"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="detail" id="detail-panel">
+    <div class="empty-state"><p>⚔ Select a fighter</p></div>
+  </div>
+</div>
+
+<script>
+// ── THEME / FONT ──────────────────────────────────────────────────────────────
+function toggleFont(){
+  const isLg = document.documentElement.classList.toggle('text-lg');
+  document.getElementById('font-btn').innerHTML = isLg
+    ? '<span class="icon">𝐚</span><span>A-</span>'
+    : '<span class="icon">𝐀</span><span>A+</span>';
+}
+function toggleTheme(){
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme', isDark?'light':'dark');
+  document.getElementById('theme-btn').innerHTML = isDark
+    ? '<span class="icon">🌙</span><span>Dark</span>'
+    : '<span class="icon">☀️</span><span>Light</span>';
+}
+
+// ── CLASS DESCRIPTIONS ────────────────────────────────────────────────────────
+const CLASS_DESC = {
+  ASSASSIN: "Critical Hit on roll results of 1, 2, or 3 (instead of only 1).",
+  ROGUE: "Once per Activation, on at least one successful Hit, may perform an AG roll. If successful, the Hit gains Knockdown.",
+  WARRIOR: "During Strategic Phase, may enter Defensive Stance (token). In Defensive Stance: STK 1 in Active Role, default STK in Reactive Role. Lasts until next Strategic Phase.",
+  RANGER: "In the End Phase of the Active Role, may perform a Normal Movement (does not provoke Reactions).",
+  MAGE: "When casting a Spell, may spend an unspent AP to Reroll any number of dice. Can convert APs into Mana Counters (cumulative, don't disappear).",
+  ENCHANTER: "May cast Enchantment-Type Spells on allied models without performing a roll.",
+  WIZARD: "When casting a Spell of the Elder Element, may Reroll up to 1 failed roll.",
+  SORCERER: "In the Active Role, when casting a Sorcery-Type Spell, may Reroll up to 1 failed roll.",
+  SUMMONER: "Can start the game with a Tier II or lower creature in Awareness (free, no roll). Shares Mana pool with other Summoners. If Incapacitated, accumulated Mana is discarded.",
+  ARTIFICER: "During Strategic Phase, may select an Enchantment Spell available to them and apply its effect to themselves without a roll, until next Strategic Phase.",
+  MARKSMAN: "If Idle is declared during Movement Step, gains +4 Accuracy until end of Activation Sequence.",
+  ARMSMASTER: "In the Active Role, may gain +1 Strike when performing a Melee Attack.",
+  BERSERKER: "Once per turn, when suffering Wounds from Damage Rolls, may perform a Toughness roll for each Wound. On success, that Wound is prevented.",
+  DRUID: "+4 Modifier when casting Earth Spells. Can cast Spells using either Intellect or Morale.",
+  RANGER: "In the End Phase of the Active Role, may perform a Normal Movement (does not provoke Reactions).",
+  SENTINEL: "In the Reactive Role, may gain +1 Strike when performing an Attack.",
+  SOLDIER: "+1 OFF, +1 DEF, +1 ACC, +1 INT, +1 M for each other Soldier from the same Party within Awareness that is alive, up to +3.",
+  VITALIST: "Can cast Healing-Type Spells on allied models that are not Incapacitated or Dead without performing a roll.",
+  ALCHEMIST: "Consumables replenish during Strategic Phase. When casting a Transmutation Spell, may Reroll up to 1 failed roll.",
+  MYSTIC: "Must use Morale instead of Intellect when casting Spells.",
+  CREATURE: "No particular class abilities. Some Quests may add specific effects to the Creature Class.",
+  CIVILIAN: "No particular class abilities. Some Quests may add specific effects to the Civilian Class.",
+};
+
+// ── ITEM CATEGORY DESCRIPTIONS ───────────────────────────────────────────────
+const ITEM_CAT_DESC = {
+  MELEE:    "Weapon — gives the Attack the specified RCH, STK, PW and Effects when equipped. A model can only have one Weapon equipped at a time (except with Dual-Wield).",
+  RANGED:   "Ranged Weapon — can be used for Ranged Attacks. RCH shows range intervals and their ACC modifiers. Two-Handed weapons prevent Shield use.",
+  NATURAL:  "Natural Weapon — innate weapon of the creature, always equipped. Fills no Inventory space (WGT and QTY shown as /).",
+  SHIELD:   "Shield — provides a passive defensive effect when equipped. Can also be used as a Melee Attack (Reach 0). Weapons with RCH > 0 suffer -1 STK while Shield is equipped.",
+  ACCESSORY:"Accessory — provides a passive effect when equipped. Does not need to replace other items; can be worn alongside Weapons and Shields.",
+  CONSUMABLE:"Consumable — discarded from Inventory after use, whether successful or not. A model may use only one Consumable of the same name at a time.",
+  DEFENSIVE:"Defensive Item — provides passive protection or utility. See item effect for details.",
+};
+
+// ── COMBAT ARTS FULL DATA ────────────────────────────────────────────────────
+const COMBAT_ARTS = {
+  "Assassination": [
+    {level:1, name:"Aiming for the Vitals",    desc:"User's Attack gains +6 Power."},
+    {level:2, name:"Cunning Precaution",        desc:"User's Attack gains Poison I Trait."},
+    {level:3, name:"Overwhelming Assault",      desc:"User's Attack gains +1 Strike."},
+    {level:4, name:"Decisive Blow",             desc:"In the Active Role, User's successful Attack Rolls become Critical Hits."},
+    {level:5, name:"Deadly Precision",          desc:"If a model suffers a Wound by this ability, it automatically dies."},
+  ],
+  "Fencing": [
+    {level:1, name:"Masterful Parry",   desc:"Target's Melee Attack suffers -3 Modifier."},
+    {level:2, name:"Harsh Riposte",     desc:"Target's Melee Attack suffers -1 Strike (cannot be reduced below 1)."},
+    {level:3, name:"Second Wind",       desc:"User's Melee Attack gains +1 Strike."},
+    {level:4, name:"Grapple & Thrash",  desc:"User's Melee Attack gains Knockdown."},
+    {level:5, name:"Striking the Gaps", desc:"User's Melee Attack gains Ignore Armor."},
+  ],
+  "Archery": [
+    {level:1, name:"Overdraw",            desc:"When using a weapon with two RCH values, the first value RCH is increased by 6\"."},
+    {level:2, name:"Impeding Momentum",   desc:"If hit, the target becomes Slowed (State) until the end of the turn."},
+    {level:3, name:"Staggering Precision",desc:"User's Ranged Attack gains Stagger."},
+    {level:4, name:"Quickdraw",           desc:"User's Ranged Attack gains +1 STK."},
+  ],
+  "Berserk": [
+    {level:1, name:"Grapple & Thrash", desc:"User's Melee Attack gains Knockdown."},
+    {level:2, name:"Onslaught",        desc:"User's Melee Attack gains Sweep."},
+    {level:3, name:"Limb Fracture",    desc:"User's Melee Attack gains Crippling."},
+    {level:4, name:"Mortal Wound",     desc:"User's Melee Attack gains Cleave."},
+  ],
+};
+
+// ── EVENT DELEGATION para acordeones (evita problemas con comillas en template literals) ──
+document.addEventListener('click', function(e){
+  const t = e.target.closest('[data-toggle]');
+  if(!t) return;
+  const action = t.getAttribute('data-toggle');
+  const id     = t.getAttribute('data-id');
+  if(action === 'class'){
+    document.getElementById('badge-'+id)?.classList.toggle('open');
+    document.getElementById('classpanel-'+id)?.classList.toggle('open');
+  } else if(action === 'cat'){
+    document.getElementById('cat-'+id)?.classList.toggle('open');
+    document.getElementById('catdesc-'+id)?.classList.toggle('open');
+  } else if(action === 'dismiss'){
+    const iid = parseFloat(t.getAttribute('data-iid'));
+    if(iid) dismissCreature(iid);
+  } else if(action === 'summon'){
+    const creature = t.getAttribute('data-creature');
+    if(creature) summonCreature(creature);
+  } else if(action === 'accordion'){
+    document.getElementById('acc-'+id)?.classList.toggle('open');
+  }
+});
+
+const CREATURES = {
+  "Gargoyle": {
+    name:"Gargoyle", tier:1, size:"Small", isCreature:true,
+    classes:["CREATURE"],
+    attrs:{STA:2,SPD:5,OFF:12,DEF:8,ACC:8,INT:8,AG:8,T:12,ARM:5,HP:1,M:20},
+    inventorySpace:2,
+    weapons:[{name:"Gargoyle's Claws",mode:"NATURAL",qty:1,PW:"T",RCH:"0",STK:"STA",WGT:"/",
+      effect:"First time each turn this model deals a Wound, this model gains an Activation Point and the wounded model loses an Activation Point, if it has any."}],
+    skills:[
+      {name:"Leap",desc:"This model can perform the Jump Special Movement as if it were a Normal Movement. While performing Jump, its SPD is not halved."},
+      {name:"Climbing",desc:"This model can perform the Climb Special Movement as if it were a Normal Movement, ignoring 'A model cannot perform any other Action while on a vertical surface'. While performing Climb, its SPD is not halved."},
+    ],
+    arts:[], traits:[
+      {name:"Construct",desc:"Cannot be affected by: Surprise Attack, Stagger, Vampirism, Mindgame, Burn. Cannot be affected by Charm or Toxic Environment. Cannot enter Panicked, Bleeding, Poisoned, Weakened or Confused states. HP Leech abilities don't affect this model. Cannot regain HP from Spells or Skills without Earth Element. If HP reaches 0, removed from field."},
+      {name:"Survival (Scorching)",desc:"This model is not affected by the Scorching Environment."},
+    ],
+    upgrades:[], spellcrafts:[], stratagems:[], affinities:[]
+  },
+  "Golem": {
+    name:"Golem", tier:2, size:"Huge", isCreature:true,
+    classes:["CREATURE"],
+    attrs:{STA:2,SPD:3,OFF:10,DEF:13,ACC:8,INT:8,AG:6,T:15,ARM:8,HP:3,M:20},
+    inventorySpace:2,
+    weapons:[{name:"Fists of Stone",mode:"NATURAL",qty:1,PW:"T",RCH:"0",STK:"STA",WGT:"/",
+      effect:"Stagger."}],
+    skills:[
+      {name:"Protector",desc:"Reactive Role only. When an allied model within 1/2 SPD distance becomes the target of an Attack, this model may spend an AP to move into base contact with that ally (cannot move through objects taller than its Hitbox). If it does, it becomes the new target of the Attack instead."},
+    ],
+    arts:[], traits:[
+      {name:"Construct",desc:"Cannot be affected by: Surprise Attack, Stagger, Vampirism, Mindgame, Burn. Cannot be affected by Charm or Toxic Environment. Cannot enter Panicked, Bleeding, Poisoned, Weakened or Confused states. HP Leech abilities don't affect this model. Cannot regain HP from Spells or Skills without Earth Element. If HP reaches 0, removed from field."},
+      {name:"Survival (Scorching)",desc:"This model is not affected by the Scorching Environment."},
+    ],
+    upgrades:[], spellcrafts:[], stratagems:[], affinities:[]
+  },
+  "Earth Elemental": {
+    name:"Earth Elemental", tier:3, size:"Gigantic", isCreature:true,
+    classes:["CREATURE"],
+    attrs:{STA:2,SPD:4,OFF:12,DEF:14,ACC:10,INT:8,AG:6,T:16,ARM:10,HP:4,M:20},
+    inventorySpace:2,
+    weapons:[{name:"Earthen Fists",mode:"NATURAL",qty:1,PW:"T",RCH:"1",STK:"2",WGT:"/",
+      effect:"Stagger, Knockdown."}],
+    skills:[
+      {name:"Regeneration",desc:"During its Strategic phase, this model may regain 1 HP and cancel the Bleeding, Weakened and Crippled states."},
+      {name:"Hurl",desc:"May declare a STK 1 Ranged Attack with RCH and PW equal to its T value, AOE: Circular S, and Stagger. If target is within 1/2 RCH, gains +4 ACC. Cannot use other Ranged Weapon or Spell during this Activation."},
+    ],
+    arts:[], traits:[
+      {name:"Elemental",desc:"Cannot be affected by: Stagger, Vampirism, Mindgame. Cannot be affected by Charm or Toxic Environment. Cannot enter Bleeding, Poisoned or Weakened states. If HP reaches 0, removed from field."},
+      {name:"Elemental Essence (Earth)",desc:"Cannot suffer effects from Earth Attacks. Melee Attacks with Natural Weapons deal Earth Magical Damage."},
+      {name:"Watchful",desc:"This model receives a double amount of Activation Points in its Reactive Role."},
+      {name:"Affinity (Earth)",desc:"This model can cast Earth Spells."},
+      {name:"Survival (Scorching, Forest, Swamp)",desc:"This model is not affected by Scorching, Forest or Swamp Environments."},
+    ],
+    upgrades:[],
+    spellcrafts:[{code:"OTHER_SPELLS_ROOTING", name:"Rooting Embrace", level:1, singleSpell:true}],
+    stratagems:[], affinities:["Earth"]
+  },
+  "Colossus": {
+    name:"Colossus", tier:4, size:"Colossal", isCreature:true,
+    classes:["CREATURE"],
+    attrs:{STA:3,SPD:4,OFF:14,DEF:14,ACC:8,INT:8,AG:6,T:17,ARM:10,HP:6,M:20},
+    inventorySpace:2,
+    weapons:[{name:"Hack & Thrash",mode:"NATURAL",qty:1,PW:"T",RCH:"1",STK:"2",WGT:"/",
+      effect:"Sweep I, Knockdown, Cleave."}],
+    skills:[
+      {name:"Taunt",desc:"Movement step only. All enemy models with LoS, or within whose Awareness this model enters, must perform an INT roll. On fail, must declare a Reaction against this model if possible."},
+    ],
+    arts:[], traits:[
+      {name:"Construct",desc:"Cannot be affected by: Surprise Attack, Stagger, Vampirism, Mindgame, Burn. Cannot be affected by Charm or Toxic Environment. Cannot enter Panicked, Bleeding, Poisoned, Weakened or Confused states. If HP reaches 0, removed from field."},
+      {name:"Trample",desc:"When declaring Run, can move through smaller models. Each model moved through suffers a Knockdown Hit with damage equal to this model's T. Reacting model can Dodge."},
+      {name:"Unstoppable",desc:"When attacking a smaller model, Confrontation does not occur (successful Attack rolls don't block each other)."},
+      {name:"Intimidating",desc:"Panicked models with LoS towards this model suffer -6 M."},
+      {name:"Survival (Scorching)",desc:"This model is not affected by the Scorching Environment."},
+    ],
+    upgrades:[], spellcrafts:[], stratagems:[], affinities:[]
+  }
+};
+
+// Rooting Embrace as inline spellcraft for Earth Elemental
+const SPELLBOOK = {
+  "SUCCUBI_MAGIC":{name:"Succubi Magic",spells:[
+    {level:1,element:"Fire",   name:"Fiery Fervor",     type:["Enchantment","Ranged"],   PW:"-",RCH:"16",          STK:"1",effect:"Remove Weakened, Bleeding, Poisoned, Confused, Crippled, Blinded, Immobilized, Panicked, Petrified, Fatigued States from the enchanted model. The model gains +2 OFF, DEF."},
+    {level:1,element:"Fire",   name:"Unrelenting Zeal", type:["Enchantment","Ranged"],   PW:"-",RCH:"16",          STK:"2",effect:"When the enchanted model would suffer a Wound, it may perform a M roll. If successful, that Wound is negated and this Spell ends."},
+    {level:1,element:"Profane",name:"Draining Impulse", type:["Enchantment","Ranged"],   PW:"-",RCH:"10",          STK:"1",effect:"[Mana Cost: 2] The enchanted model receives additional 2 AP in the Active and Reactive Role. After this Enchantment is removed, the model becomes Fatigued (State)."},
+    {level:1,element:"Profane",name:"Agony",            type:["Enchantment","Ranged"],   PW:"-",RCH:"Casting Aura",STK:"1",effect:"The enchanted model must perform an INT roll at the beginning of each Activation or Reaction. On a failed roll, it loses 1 HP and its Activation or Reaction ends. If a friendly model comes in Base Contact, this Enchantment ends."},
+  ]},
+  "CONJURATION":{name:"Art of Conjuration",spells:[
+    {level:1,element:"Earth",name:"Summon Gargoyle",       type:["Conjuration","Ranged"],PW:"-",RCH:"0",STK:"-",manaCost:1,summons:"Gargoyle",   effect:"[Mana Cost: 1] Summon Gargoyle to the field."},
+    {level:2,element:"Earth",name:"Summon Golem",          type:["Conjuration","Ranged"],PW:"-",RCH:"0",STK:"-",manaCost:2,summons:"Golem",     effect:"[Mana Cost: 2] Summon Golem to the field."},
+    {level:3,element:"Earth",name:"Summon Earth Elemental",type:["Conjuration","Ranged"],PW:"-",RCH:"0",STK:"-",manaCost:3,summons:"Earth Elemental",effect:"[Mana Cost: 3] Summon Earth Elemental to the field."},
+    {level:4,element:"Earth",name:"Summon Colossus",       type:["Conjuration","Ranged"],PW:"-",RCH:"0",STK:"-",manaCost:4,summons:"Colossus",  effect:"[Mana Cost: 4] Summon Colossus to the field."},
+    {level:1,element:"Elder",name:"Summon Imp",            type:["Conjuration","Ranged"],PW:"-",RCH:"0",STK:"-",manaCost:1,summons:null,        effect:"[Mana Cost: 1] Summon Imp to the field."},
+  ]},
+  "ART_OF_CONJURATION":{name:"Art of Conjuration",spells:[]}, // alias, filled below
+  "WIZARDRY":{name:"Wizardry",spells:[
+    {level:1,element:"Elder",name:"Mana Burst",         type:["Sorcery","Ranged"],     PW:"INT",RCH:"16",STK:"1",effect:"Stagger."},
+    {level:1,element:"Elder",name:"Dispel Magic",       type:["Healing","Ranged"],     PW:"-",  RCH:"16, AoE: Circular L",STK:"1",effect:"Targetless. Choose one: Remove target Sorcery/Enchantment/Transmutation Spell / Remove summoned creature / Cancel Shrouded State."},
+    {level:2,element:"Elder",name:"Confuse Target",     type:["Sorcery","Ranged"],     PW:"-",  RCH:"16",STK:"1",effect:"Mindgame, Ricochet I. Target becomes Confused until caster's next Strategic Phase. May spend 1 Mana for +2 STK."},
+    {level:2,element:"Elder",name:"Ward",               type:["Sorcery","Ranged/Melee"],PW:"-", RCH:"16",STK:"1",effect:"Non-Critical DMG and effects of any incoming Attack targeting the target are ignored. When caster is Engaged, can only target the caster."},
+    {level:3,element:"Elder",name:"Redirect Damage",   type:["Sorcery","Ranged/Melee"],PW:"-",  RCH:"16",STK:"1",effect:"On Hit, target's successful non-Critical Hits are negated. Target receives non-Critical Hits equal to its successful Attack Rolls, using the same Item/Spell/Abilities."},
+    {level:3,element:"Elder",name:"Hastened Recovery", type:["Healing","Ranged"],      PW:"-",  RCH:"16",STK:"STA",effect:"Choose one: Remove Crippled/Bleeding/Weakened/Poisoned State, or target regains 1 HP."},
+  ]},
+  "OTHER_SPELLS_ROOTING":{name:"Rooting Embrace",spells:[
+    {level:1,element:"Earth",name:"Rooting Embrace",type:["Sorcery","Ranged"],PW:"-",RCH:"Casting Aura",STK:"1",effect:"Focus. Affects all enemy models within the Casting Aura. On Hit, the model becomes Immobilized (State)."},
+  ]},
+  "ART_OF_ENCHANTING":{name:"Art of Enchanting",spells:[
+    {level:1,element:"Fire",   name:"Burning Touch",      type:["Enchantment","Ranged/Melee"],PW:"★",RCH:"16",STK:"1",effect:"Target gains Burn (1), Sweep I. Enchanted model may Assist to remove Bleeding from allied model in Base Contact."},
+    {level:2,element:"Fire",   name:"Melting Touch",      type:["Enchantment","Ranged"],      PW:"★",RCH:"16",STK:"1",effect:"Target gains Burn, Ignore Armor."},
+    {level:3,element:"Fire",   name:"Flameskin",          type:["Enchantment","Ranged"],      PW:"★",RCH:"16",STK:"1",effect:"A model attacking the enchanted model within 1\" suffers PW 10 Hit with Burn (1). If it wounds, Enchantment is removed."},
+    {level:1,element:"Water",  name:"Cutting Chill",      type:["Enchantment","Ranged"],      PW:"★",RCH:"16",STK:"1",effect:"Enchanted model's Melee Attacks gain +2 PW. On Melee Hit, target becomes Immobilized."},
+    {level:2,element:"Water",  name:"Mirror Bubble",      type:["Enchantment","Ranged"],      PW:"★",RCH:"10",STK:"1",effect:"When enchanted model suffers a Melee Hit, attacker performs AG roll. On fail, attacker suffers STK 1 Hit with PW equal to its own Attack. Enchantment then removed."},
+    {level:3,element:"Water",  name:"Ice Shield",         type:["Enchantment","Ranged"],      PW:"-", RCH:"16",STK:"1",effect:"Attacker must first DMG roll vs ARM 5. If successful, another roll vs default ARM with PW-3."},
+    {level:1,element:"Elder",  name:"Arcane Shield",      type:["Enchantment","Ranged"],      PW:"-", RCH:"16",STK:"1",effect:"Enchanted model gains +4 ARM (max 6). Critical Hits don't ignore ARM."},
+    {level:2,element:"Elder",  name:"Spectral Blade",     type:["Enchantment","Ranged"],      PW:"★",RCH:"16",STK:"1",effect:"Target gains: Ignore Armor, Stagger."},
+    {level:3,element:"Elder",  name:"Hasten",             type:["Enchantment","Ranged"],      PW:"-", RCH:"16",STK:"1",effect:"During Strategic Phase, enchanted model may perform a Normal Movement then remove Enchantment. Does not provoke Reactions."},
+    {level:1,element:"Air",    name:"Formless Edge",      type:["Enchantment","Ranged"],      PW:"★",RCH:"16",STK:"1",effect:"Enchanted model's Melee Attacks gain +2 RCH and Knockback (2)."},
+    {level:2,element:"Air",    name:"Featherlight",       type:["Enchantment","Ranged"],      PW:"-", RCH:"16",STK:"1",effect:"Target gains +2 SPD."},
+    {level:3,element:"Air",    name:"Protective Currents",type:["Enchantment","Ranged"],      PW:"-", RCH:"Casting Aura",STK:"STA",effect:"Attacks suffer -4 mod. On Hit, Enchantment removed but all enemies within 3\" suffer Knockback (3), no damage."},
+  ]},
+  "ART_OF_SORCERY":{name:"Art of Sorcery",spells:[
+    {level:1,element:"Fire",  name:"Ignite",             type:["Sorcery","Ranged"],      PW:"INT",RCH:"16",STK:"STA",effect:"Burn (1)."},
+    {level:2,element:"Fire",  name:"Flare",              type:["Sorcery","Ranged/Melee"],PW:"INT",RCH:"3", STK:"1",  effect:"Burn (2), Sweep II."},
+    {level:3,element:"Fire",  name:"Fireball",           type:["Sorcery","Ranged"],      PW:"INT",RCH:"16, AoE: Circular L",STK:"1",effect:"Burn (1), Targetless."},
+    {level:1,element:"Water", name:"Water Lash",         type:["Sorcery","Ranged/Melee"],PW:"8",  RCH:"16",STK:"STA",effect:"Knockback (2) (all sizes except Colossal and Epic)."},
+    {level:2,element:"Water", name:"Piercing Stream",    type:["Sorcery","Ranged"],      PW:"INT",RCH:"16",STK:"2",  effect:"Armor-Piercing."},
+    {level:3,element:"Water", name:"Drown",              type:["Sorcery","Ranged"],      PW:"INT",RCH:"16, Circular L",STK:"1",effect:"Enemy models within AOE become Weakened on Hit until end of turn."},
+    {level:1,element:"Elder", name:"Arcane Bolt",        type:["Sorcery","Ranged"],      PW:"INT",RCH:"16",STK:"STA",effect:"On critical: Knockdown."},
+    {level:2,element:"Elder", name:"Telekinetic Circular",type:["Sorcery","Ranged"],     PW:"INT-3",RCH:"AoE: Spray L",STK:"1",effect:"Knockback (3). Knockdown."},
+    {level:3,element:"Elder", name:"Soul Crush",         type:["Sorcery","Ranged"],      PW:"INT",RCH:"16",STK:"1",  effect:"Ignore Armor, Stun. If wounded, target becomes Panicked until caster's next End phase."},
+  ]},
+};
+// Fill ART_OF_CONJURATION alias
+SPELLBOOK["ART_OF_CONJURATION"].spells = SPELLBOOK["CONJURATION"].spells;
+
+// ── ARMY DATA ─────────────────────────────────────────────────────────────────
+let BASE_ARMY = [
+  {
+    name:"Vizier of Conjurations", cost:22, size:"Medium", inventorySpace:3,
+    classes:["MAGE","SUMMONER"],
+    attrs:{STA:2,SPD:5,OFF:8,DEF:8,ACC:8,INT:16,AG:10,T:8,ARM:0,HP:1,M:8},
+    affinities:["Elder","Earth"],
+    weapons:[{name:"Staff of Conjuration",mode:"MELEE",qty:1,PW:"-",RCH:"-",STK:"-",WGT:"2",
+      effect:"When Wearer summons creatures, they can be placed anywhere within the Wearer's Awareness."}],
+    skills:[], arts:[],
+    traits:[
+      {name:"Affinity (Elder, Earth) 1",desc:"This model can cast Elder and Earth Spells."},
+      {name:"Resourceful 2",desc:"This model may receive 1 additional Upgrade."},
+    ],
+    upgrades:[{name:"Conjured Retinue",cost:3,desc:"Tier I and II creatures summoned by this model receive the Soldier Class."}],
+    spellcrafts:[
+      {code:"ART_OF_CONJURATION", name:"Art of Conjuration", level:4},
+      {code:"WIZARDRY",           name:"Wizardry",           level:1},
+    ],
+    stratagems:[
+      {name:"Temporary Bind",      type:"AUTHORITY",  effect:"Summoning Limit of the target summoned creature on the field is reduced to 0."},
+      {name:"Refined Conjuration", type:"AUTHORITY",  effect:"Mana Cost of Conjuration Spells is reduced by 1."},
+    ]
+  },
+  {
+    name:"Taskmage Explorer", cost:19, size:"Medium", inventorySpace:5,
+    classes:["WIZARD","MAGE"],
+    attrs:{STA:2,SPD:5,OFF:8,DEF:8,ACC:8,INT:14,AG:12,T:10,ARM:0,HP:1,M:12},
+    affinities:["Elder"],
+    weapons:[{name:"Dagger",mode:"MELEE",qty:1,PW:"T-3",RCH:"0",STK:"STA",WGT:"0",
+      effect:"Throwing I. +1 STK when used against a model in Crouched State."}],
+    skills:[
+      {name:"Stealth 1",  desc:"When this model activates it does not provoke a Reaction from enemy models that do not have LoS to it."},
+      {name:"Tracking 1", desc:"This model ignores Concealment bonuses of enemy models when making Ranged Attacks."},
+    ],
+    arts:[],
+    traits:[
+      {name:"Affinity (Elder) 1",    desc:"This model can cast Elder Spells."},
+      {name:"Resourceful 1",         desc:"This model may receive 1 additional Upgrade."},
+      {name:"Survival (Scorching) 1",desc:"This model is not affected by the Scorching Environment."},
+    ],
+    upgrades:[{name:"First Aid",cost:2,desc:"Once per game, this model may perform a Healing Action as a free action, restoring 1 HP to a friendly model in base contact."}],
+    spellcrafts:[{code:"WIZARDRY", name:"Wizardry", level:3}],
+    stratagems:[], affinities:["Elder"]
+  },
+  {
+    name:"Academy Expeditioner", cost:18, size:"Medium", inventorySpace:5,
+    classes:["SORCERER","MAGE"],
+    attrs:{STA:2,SPD:5,OFF:10,DEF:8,ACC:8,INT:14,AG:10,T:10,ARM:4,HP:2,M:12},
+    affinities:["Elder"],
+    weapons:[{name:"Dagger",mode:"MELEE",qty:1,PW:"T-3",RCH:"0",STK:"STA",WGT:"0",
+      effect:"Throwing I. +1 STK when used against a model in Crouched State."}],
+    skills:[],arts:[],
+    traits:[
+      {name:"Affinity (Elder) 1",    desc:"This model can cast Elder Spells."},
+      {name:"Survival (Scorching) 1",desc:"This model is not affected by the Scorching Environment."},
+    ],
+    upgrades:[{name:"First Aid",cost:2,desc:"Once per game, this model may perform a Healing Action as a free action, restoring 1 HP to a friendly model in base contact."}],
+    spellcrafts:[{code:"ART_OF_SORCERY", name:"Art of Sorcery", level:3}],
+    stratagems:[], affinities:["Elder"]
+  },
+  {
+    name:"Faris Outrider", cost:18, size:"Medium", inventorySpace:5,
+    classes:["ARTIFICER","ROGUE"],
+    attrs:{STA:2,SPD:5,OFF:14,DEF:11,ACC:8,INT:13,AG:12,T:13,ARM:1,HP:2,M:12},
+    affinities:["Elder"],
+    weapons:[
+      {name:"Sword",         mode:"MELEE",qty:1,PW:"T",  RCH:"1",STK:"STA",WGT:"1",effect:"-"},
+      {name:"Arcane Lantern",mode:"MELEE",qty:1,PW:"T",  RCH:"-", STK:"-",  WGT:"1",effect:"The wearer gains Vigilance. Shrouded and Intrigue States within the Wearer's Awareness are revealed."},
+      {name:"Dagger",        mode:"MELEE",qty:1,PW:"T-3",RCH:"0", STK:"STA",WGT:"0",effect:"Throwing I. +1 STK when used against a model in Crouched State."},
+    ],
+    skills:[
+      {name:"Stealth 1",  desc:"When this model activates it does not provoke a Reaction from enemy models that do not have LoS to it."},
+      {name:"Follow Up 1",desc:"After performing an Attack action in which at least one Attack roll was successful, this model may perform a free Normal Movement equal to half its SPD."},
+      {name:"Taunt 1",    desc:"Movement step only. Enemy models with LoS or entering this model's Awareness must perform INT roll. On fail, must React against this model if possible."},
+    ],
+    arts:[],
+    traits:[
+      {name:"Affinity (Elder) 1",    desc:"This model can cast Elder Spells."},
+      {name:"Survival (Scorching) 1",desc:"This model is not affected by the Scorching Environment."},
+    ],
+    upgrades:[{name:"Utility Tool",cost:2,desc:"This model may perform a free Interact action once per Activation."}],
+    spellcrafts:[{code:"ART_OF_ENCHANTING", name:"Art of Enchanting", level:3}],
+    stratagems:[], affinities:["Elder"]
+  },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let ARMY = [...BASE_ARMY];
+let selected = null;
+let summonedCreatures = []; // {id, creatureName, instanceId}
+
+function totalPts(){
+  return BASE_ARMY.reduce((s,c)=>s+c.cost,0);
+}
+
+// ── HEADER ────────────────────────────────────────────────────────────────────
+function updateHeader(){
+  document.getElementById('header-faction').textContent = 'Sand Kingdoms · Army Viewer';
+  document.getElementById('header-pts').textContent = totalPts()+' pts';
+  const count = ARMY.length;
+  document.getElementById('roster-header').textContent =
+    `Warband — ${count} fighter${count!==1?'s':''}`;
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function classColor(cls){
+  const map={ASSASSIN:'assassin',ROGUE:'rogue',WARRIOR:'warrior',RANGER:'ranger',
+    MAGE:'mage',ENCHANTER:'enchanter',WIZARD:'mage',SORCERER:'mage',
+    SUMMONER:'mage',ARTIFICER:'mage',CREATURE:'creature'};
+  return map[cls]||'mage';
+}
+function elBadge(el){
+  return `<span class="el-badge el-${el.toLowerCase()}">${el}</span>`;
+}
+function sec(title,html){
+  return html?`<div class="section-title">${title}</div>${html}`:'';
+}
+
+// ── SUMMON / DISMISS ──────────────────────────────────────────────────────────
+function summonCreature(creatureName){
+  const template = CREATURES[creatureName];
+  if(!template) return;
+  const instanceId = Date.now()+Math.random();
+  const instance = {
+    ...JSON.parse(JSON.stringify(template)),
+    _instanceId: instanceId,
+    _summonedBy: creatureName,
+    name: template.name,
+    cost: 0,
+  };
+  ARMY.push(instance);
+  summonedCreatures.push({creatureName, instanceId});
+  renderRoster();
+  updateHeader();
+  // Select the new creature
+  selectChar(ARMY.length-1);
+}
+
+function dismissCreature(instanceId){
+  const idx = ARMY.findIndex(c=>c._instanceId===instanceId);
+  if(idx===-1) return;
+  ARMY.splice(idx,1);
+  summonedCreatures = summonedCreatures.filter(s=>s.instanceId!==instanceId);
+  // Reselect safely
+  if(selected>=ARMY.length) selected=ARMY.length-1;
+  renderRoster();
+  updateHeader();
+  if(selected>=0) renderDetail(ARMY[selected]);
+  else document.getElementById('detail-panel').innerHTML='<div class="empty-state"><p>⚔ Select a fighter</p></div>';
+}
+
+// ── RENDER ROSTER ─────────────────────────────────────────────────────────────
+function renderRoster(){
+  document.getElementById('roster-list').innerHTML = ARMY.map((c,i)=>{
+    const isCreature = !!c.isCreature;
+    const classStr = isCreature
+      ? `★ CREATURE · Tier ${c.tier}`
+      : c.classes.join(' · ');
+    const costStr = isCreature ? '' :
+      `<div class="char-cost">${c.cost}pts</div>`;
+    return `
+      <div class="char-card${isCreature?' creature':''}${selected===i?' active':''}" onclick="selectChar(${i})">
+        ${costStr}
+        <div class="char-name">${c.name}</div>
+        <div class="char-class">${classStr}</div>
+        <div class="attrs-row">
+          ${['STA','SPD','OFF','DEF','ACC','AG','ARM','HP'].map(k=>`
+            <div class="attr-cell">
+              <span class="attr-key">${k}</span>
+              <span class="attr-val">${c.attrs[k]}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── RENDER DETAIL ─────────────────────────────────────────────────────────────
+function renderDetail(c){
+  const isCreature = !!c.isCreature;
+
+  // Class badges — pulsables con descripción desplegable
+  const charId = c.name.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+  const badgesHTML = c.classes.map((cl,i)=>{
+    const desc = CLASS_DESC[cl.toUpperCase()] || '';
+    const uid = `${charId}_${cl}_${i}`;
+    const color = classColor(cl);
+    if(!desc) return `<span class="class-badge badge-${color}">${cl}</span>`;
+    return `
+      <span>
+        <span class="class-badge badge-${color}" id="badge-${uid}" data-toggle="class" data-id="${uid}">
+          ${cl} <span class="badge-chevron">▾</span>
+        </span>
+        <div class="class-desc-panel" id="classpanel-${uid}">${desc}</div>
+      </span>`;
+  }).join('');
+
+  // Inventory
+  const usedWgt = c.weapons.reduce((s,w)=>{
+    const v=parseFloat(w.WGT); return s+(isNaN(v)?0:v);
+  },0);
+  const invSpace = c.inventorySpace||'?';
+  const invOver = typeof invSpace==='number'&&usedWgt>invSpace;
+  const invHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-family:'Cinzel',serif;font-size:0.714rem;letter-spacing:1px">
+    <span style="color:var(--text-dim)">INVENTORY</span>
+    <span style="color:${invOver?'#c0392b':'var(--gold)'}">
+      ${usedWgt} / ${invSpace} wgt${invOver?' <span>⚠ over-encumbered</span>':''}
+    </span>
+  </div>`;
+
+  // Weapons — con categoría como botón acordeón
+  const weaponsHTML = c.weapons.map((w,wi)=>{
+    const catKey = (w.mode||'MELEE').toUpperCase().replace(/-/g,'_');
+    const catDesc = ITEM_CAT_DESC[catKey] || ITEM_CAT_DESC['MELEE'];
+    const uid = `${charId}_w${wi}`;
+    // Determinar label de categoría
+    let catLabel = w.mode || 'MELEE';
+    if(w.mode==='NATURAL') catLabel='NATURAL';
+    else if(catKey==='RANGED') catLabel='RANGED WEAPON';
+    else catLabel='MELEE WEAPON';
+    // Si el efecto contiene Shield o Accessory, ajustar
+    const isShield = (w.name||'').toLowerCase().includes('shield') || (w.effect||'').toLowerCase().includes('shield');
+    const isAccessory = w.STK==='-'&&w.PW==='-'&&w.RCH==='-';
+    const finalCatKey = isShield?'SHIELD': isAccessory?'ACCESSORY': catKey;
+    const finalCatLabel = isShield?'SHIELD': isAccessory?'ACCESSORY': catLabel;
+    const finalCatDesc = ITEM_CAT_DESC[finalCatKey]||catDesc;
+
+    return `
+    <div class="weapon-card">
+      <div class="weapon-name">${w.name}${w.qty>1?` <span style="font-size:0.786rem;color:var(--text-dim)">×${w.qty}</span>`:''}</div>
+      <span class="weapon-cat mode-${(w.mode||'melee').toLowerCase()}" id="cat-${uid}" data-toggle="cat" data-id="${uid}">
+        ${finalCatLabel} <span class="cat-chevron">▾</span>
+      </span>
+      <div class="cat-desc" id="catdesc-${uid}">${finalCatDesc}</div>
+      <div class="weapon-stats">
+        ${w.PW&&w.PW!=='-'?`<div class="weapon-stat">PW <span>${w.PW}</span></div>`:''}
+        ${w.RCH&&w.RCH!=='-'?`<div class="weapon-stat">RCH <span>${w.RCH}</span></div>`:''}
+        ${w.STK&&w.STK!=='-'?`<div class="weapon-stat">STK <span>${w.STK}</span></div>`:''}
+        ${w.WGT&&w.WGT!=='/'?`<div class="weapon-stat">WGT <span>${w.WGT}</span></div>`:''}
+      </div>
+      ${w.effect&&w.effect!=='-'?`<div class="weapon-effect">${w.effect}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // Skills
+  const skillsHTML = c.skills.map(s=>`
+    <div class="item-card">
+      <div class="item-name">${s.name}</div>
+      <div class="item-desc">${s.desc}</div>
+    </div>`).join('');
+
+  // Combat Arts — todos los niveles hasta el asignado, con acordeón por nivel
+  const artsHTML = c.arts.map((a,ai)=>{
+    // Extraer nombre base y nivel del string "Fencing 2" → {base:"Fencing", level:2}
+    const m = a.name.match(/^(.+?)\s+(\d+)$/);
+    if(!m) return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${a.desc}</div></div>`;
+    const base = m[1];
+    const maxLevel = parseInt(m[2]);
+    const artData = COMBAT_ARTS[base];
+    if(!artData){
+      return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${a.desc}</div></div>`;
+    }
+    const levelsHTML = artData.filter(l=>l.level<=maxLevel).map(l=>{
+      const uid=`${charId}_art${ai}_l${l.level}`;
+      return `
+        <div class="accordion${l.level===maxLevel?' open':''}" id="acc-${uid}">
+          <div class="accordion-trigger" data-toggle="accordion" data-id="${uid}">
+            <div class="accordion-trigger-left">
+              <span style="font-family:'Cinzel',serif;font-size:0.643rem;color:var(--crimson);min-width:16px">
+                ${['I','II','III','IV','V'][l.level-1]}
+              </span>
+              <span style="font-family:'Cinzel',serif;font-size:0.857rem;color:var(--text-primary)">${l.name}</span>
+              ${l.level===maxLevel?' <span style="font-size:0.600rem;color:var(--crimson);margin-left:4px">★</span>':''}
+            </div>
+            <span class="accordion-chevron">▾</span>
+          </div>
+          <div class="accordion-body">${l.desc}</div>
+        </div>`;
+    }).join('');
+    return `<div style="margin-bottom:10px">
+      <div style="font-family:'Cinzel',serif;font-size:0.714rem;color:var(--crimson);letter-spacing:1px;margin-bottom:6px">${base.toUpperCase()}</div>
+      ${levelsHTML}
+    </div>`;
+  }).join('');
+
+  // Traits
+  const traitsHTML = c.traits.map(t=>`
+    <div class="item-card purple-left">
+      <div class="item-name">${t.name}</div>
+      <div class="item-desc">${t.desc}</div>
+    </div>`).join('');
+
+  // Upgrades
+  const upgradesHTML = (c.upgrades||[]).map(u=>`
+    <div class="item-card gold-left">
+      <div class="item-name">${u.name}<span class="item-cost">(${u.cost} pts)</span></div>
+      <div class="item-desc">${u.desc}</div>
+    </div>`).join('');
+
+  // Spellcrafts
+  let spellcraftHTML = '';
+  if(c.spellcrafts&&c.spellcrafts.length){
+    spellcraftHTML = c.spellcrafts.map(sc=>{
+      const book = SPELLBOOK[sc.code];
+      if(!book) return `<div class="item-card"><div class="item-name">${sc.name}</div><div class="item-desc no-items">Spellbook not loaded.</div></div>`;
+      const available = sc.singleSpell ? book.spells : book.spells.filter(s=>s.level<=sc.level);
+      const spellsHTML = available.map(s=>{
+        const hasAff = s.element==='Any'||c.affinities.includes(s.element);
+        const isConj = !!s.summons;
+        const summonBtn = isConj&&s.summons
+          ? `<button class="summon-btn" data-toggle="summon" data-creature="${s.summons}">⬡ Summon ${s.summons}</button>`
+          : '';
+        return `
+          <div class="item-card stone-left${hasAff?'':' spell-unavailable'}" style="margin-bottom:6px">
+            <div class="item-name">
+              ${s.name}${elBadge(s.element)}
+              <span style="font-size:0.643rem;color:var(--text-dim);margin-left:4px">lvl ${s.level}</span>
+              ${s.manaCost?`<span style="font-size:0.643rem;color:#7ab8d4;margin-left:6px">🔷 ${s.manaCost} mana</span>`:''}
+            </div>
+            <div class="item-stats">
+              ${s.PW&&s.PW!=='-'?`<div class="item-stat">PW <span>${s.PW}</span></div>`:''}
+              ${s.RCH?`<div class="item-stat">RCH <span>${s.RCH}</span></div>`:''}
+              ${s.STK&&s.STK!=='-'?`<div class="item-stat">STK <span>${s.STK}</span></div>`:''}
+              <span style="font-size:0.714rem;color:var(--text-dim);font-style:italic">${s.type.join(', ')}</span>
+            </div>
+            <div class="item-desc">${s.effect}</div>
+            ${summonBtn}
+          </div>`;
+      }).join('');
+      return `
+        <div style="margin-bottom:16px">
+          <div style="font-family:'Cinzel',serif;font-size:0.786rem;color:var(--gold);margin-bottom:8px;letter-spacing:1px">
+            ${sc.name}
+            ${!sc.singleSpell?`<span style="color:var(--text-dim);font-size:0.714rem">· level ${sc.level}</span>`:''}
+            ${c.affinities.length?`<span style="color:var(--text-dim);font-size:0.643rem;margin-left:8px">Affinities: ${c.affinities.join(', ')}</span>`:''}
+          </div>
+          ${spellsHTML}
+        </div>`;
+    }).join('');
+  }
+
+  // Stratagems
+  const stratHTML = (c.stratagems||[]).map(s=>`
+    <div class="item-card stone-left">
+      <div class="item-label">${s.type}</div>
+      <div class="item-name">${s.name}</div>
+      <div class="item-desc">${s.effect}</div>
+    </div>`).join('');
+
+  // Dismiss (creatures)
+  const dismissHTML = isCreature&&c._instanceId ? `
+    <div class="gold-rule"></div>
+    <button class="dismiss-btn" data-toggle="dismiss" data-iid="${c._instanceId}">✕ Dismiss creature</button>
+  ` : '';
+
+  const leftCol = `
+    ${invHTML}
+    ${sec('Weapons', weaponsHTML)}
+    ${upgradesHTML?`<div style="margin-top:16px">${sec('Upgrades',upgradesHTML)}</div>`:''}
+  `;
+  const rightCol = `
+    ${skillsHTML?sec('Skills',skillsHTML):''}
+    ${artsHTML?`<div style="margin-top:${skillsHTML?'16px':'0'}">${sec('Combat Arts',artsHTML)}</div>`:''}
+    ${traitsHTML?`<div style="margin-top:${skillsHTML||artsHTML?'16px':'0'}">${sec('Traits',traitsHTML)}</div>`:''}
+  `;
+  const bottom = [
+    spellcraftHTML ? `<div class="gold-rule"></div>${sec('Spellcrafts', spellcraftHTML)}`:'',
+    stratHTML      ? `<div class="gold-rule"></div>${sec('Stratagems',  stratHTML)}`:'',
+    dismissHTML,
+  ].join('');
+
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="detail-content">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+        <div>
+          <div class="detail-name${isCreature?' creature-name':''}">${c.name}${isCreature?' <span style="font-size:0.9rem;opacity:0.7"> · Tier '+c.tier+' · '+c.size+'</span>':''}</div>
+          <div class="detail-meta">
+            ${badgesHTML}
+            <span style="font-size:0.857rem;color:var(--text-dim);font-style:italic">${c.size}</span>
+          </div>
+        </div>
+        ${!isCreature?'<div class="cost-badge">'+c.cost+' pts</div>':''}
+      </div>
+      <div class="gold-rule"></div>
+      <div class="col2"><div>${leftCol}</div><div>${rightCol}</div></div>
+      ${bottom}
+    </div>`;
+}
+
+function selectChar(i){
+  selected=i;
+  renderRoster();
+  renderDetail(ARMY[i]);
+  // Scroll detail back to top
+  document.getElementById('detail-panel').scrollTop=0;
+}
+
+// ── JSON PARSER ───────────────────────────────────────────────────────────────
+
+function getTraitName(t){
+  let n = t.name__ || null;
+  if(!n){
+    const td = t.trait?.data?.attributes;
+    if(td) n = td.name__ || '?';
+  }
+  if(!n) return '?';
+  // Replace (Element) with dynamic_elements
+  const de = t.dynamic_elements?.data || [];
+  if(de.length){
+    const els = de.map(e=>e.attributes.name).join(', ');
+    n = n.replace(/\(Element\)/i, `(${els})`);
+  }
+  // Replace (X...) with dynamic_value
+  const dv = t.dynamic_value;
+  if(dv) n = n.replace(/\(X[^)]*\)/i, `(${dv})`);
+  return n;
+}
+
+function getTraitDesc(t){
+  return t.trait?.data?.attributes?.description || '';
+}
+
+function getAffinities(traits){
+  const affs = [];
+  for(const t of traits){
+    const name = getTraitName(t);
+    const de = t.dynamic_elements?.data || [];
+    if(/Affinity/i.test(name)){
+      if(de.length){
+        de.forEach(e => affs.push(e.attributes.name));
+      } else {
+        const m = name.match(/Affinity\s*\(([^)]+)\)/i);
+        if(m) m[1].split(',').forEach(el => affs.push(el.trim()));
+      }
+    }
+  }
+  return affs;
+}
+
+function cleanEffect(text){
+  if(!text) return '-';
+  return String(text).replace(/\(([^)]+)\)\[[^\]]+\]/g, '$1').trim();
+}
+
+function parseWeaponMode(w){
+  const modeObj = w.attack_mode;
+  if(typeof modeObj === 'string') return modeObj;
+  if(Array.isArray(modeObj) && modeObj[0]?.mode) return modeObj[0].mode;
+  if(typeof modeObj === 'object' && modeObj?.mode) return modeObj.mode;
+  const type = w.item_type || '';
+  if(typeof type === 'string') return type || 'MELEE';
+  return 'MELEE';
+}
+
+function parseSpellGroup(sp){
+  const sg = sp.spell_group?.data?.attributes || {};
+  return {
+    code: sg.code || '',
+    name: sg.name || sp.name__ || '?',
+    level: sp.level || 1,
+  };
+}
+
+function parseArmy(data){
+  const chars = data.armyCharacterList || [];
+  const factionRaw = chars[0]?.attributes?.factions?.data?.[0]?.attributes?.name || 'Unknown';
+  const totalPts = chars.reduce((s,c)=>s+c.attributes.recruitment_cost, 0);
+
+  const parsed = chars.map(c=>{
+    const a = c.attributes;
+    const attrs = a.attributes;
+    const traits = a.traits || [];
+    const affinities = getAffinities(traits);
+
+    // Skills — description may be in attributes.description or attributes.desc
+    const skills = a.skills.data.map(s=>{
+      const sa = s.attributes;
+      return {
+        name: sa.name__ || '?',
+        desc: sa.description || sa.desc || '',
+      };
+    });
+
+    // Combat Arts
+    const arts = a.combat_arts.data.map(s=>{
+      const sa = s.attributes;
+      return {
+        name: sa.name__ || '?',
+        desc: sa.description || sa.desc || '',
+      };
+    });
+
+    // Traits
+    const traitList = traits.map(t=>({
+      name: getTraitName(t),
+      desc: getTraitDesc(t),
+    })).filter(t=>t.name && t.name !== '?');
+
+    // Weapons
+    const inv = a.inventory || {};
+    const space = inv.space || null;
+    const weapons = (inv.items || []).map(item=>{
+      const w = item.item.data.attributes;
+      const mode = parseWeaponMode(w);
+      return {
+        name: w.name || '?',
+        mode: mode,
+        qty: 1,
+        PW: w.PW || '-',
+        RCH: w.RCH || '-',
+        STK: w.STK || '-',
+        WGT: w.WGT != null ? String(w.WGT) : '-',
+        effect: cleanEffect(w.effect),
+      };
+    });
+
+    // Spellcrafts
+    const spellcrafts = (a.spellcrafts || []).map(sp=>{
+      const sg = parseSpellGroup(sp);
+      return { code: sg.code, name: sg.name, level: sg.level };
+    });
+
+    // Upgrades
+    const upgrades = (a.appliedArmyCharacterUpgrades || []).map(u=>{
+      const ua = u.upgrade.attributes;
+      return { name: ua.name || '?', cost: ua.cost || 0, desc: ua.description || '' };
+    });
+
+    // Stratagems
+    const stratRaw = a.stratagems;
+    const stratList = Array.isArray(stratRaw)
+      ? stratRaw
+      : (stratRaw?.data || []);
+    const stratagems = stratList.map(s=>{
+      const sa = s.attributes || s;
+      return {
+        name: sa.name || '?',
+        type: sa.type || '',
+        effect: cleanEffect(sa.effect),
+      };
+    });
+
+    return {
+      name: a.name,
+      cost: a.recruitment_cost,
+      size: a.size_info?.size || 'Medium',
+      inventorySpace: space,
+      classes: a.classes.data.map(cl=>cl.attributes.name),
+      attrs: Object.fromEntries(
+        ['STA','SPD','OFF','DEF','ACC','INT','AG','T','ARM','HP','M']
+          .map(k=>[k, attrs[k]?.value ?? 0])
+      ),
+      affinities,
+      weapons,
+      skills,
+      arts,
+      traits: traitList,
+      upgrades,
+      spellcrafts,
+      stratagems,
+    };
+  });
+
+  return { faction: factionRaw, totalPts, chars: parsed };
+}
+
+function loadArmyFromJSON(jsonData){
+  try {
+    const parsed = parseArmy(jsonData);
+    BASE_ARMY.length = 0;
+    parsed.chars.forEach(c => BASE_ARMY.push(c));
+    ARMY.length = 0;
+    ARMY.push(...BASE_ARMY);
+    summonedCreatures.length = 0;
+    selected = null;
+
+    // Update header faction
+    document.getElementById('header-faction').textContent =
+      parsed.faction + ' · Army Viewer';
+    document.getElementById('detail-panel').innerHTML =
+      '<div class="empty-state"><p>⚔ Select a fighter</p></div>';
+
+    updateHeader();
+    renderRoster();
+    if(ARMY.length > 0) selectChar(0);
+  } catch(e){
+    alert('Error loading army: ' + e.message);
+    console.error(e);
+  }
+}
+
+// ── FILE INPUT HANDLER ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('army-file-input').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try {
+        const data = JSON.parse(ev.target.result);
+        loadArmyFromJSON(data);
+      } catch(err){
+        alert('Invalid JSON file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    // Reset so same file can be loaded again
+    e.target.value = '';
+  });
+});
+
+// ── EXPORT PDF ───────────────────────────────────────────────────────────────
+function exportPDF(){
+  if(typeof window.jspdf === 'undefined'){
+    alert('PDF library not loaded. Please check your internet connection and try again.');
+    return;
+  }
+  const btn = document.getElementById('export-btn');
+  btn.innerHTML = '<span class="icon">⏳</span><span>...</span>';
+  btn.style.opacity = '0.6';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+
+    // ── Constants ──
+    const PW=210, PH=297, ML=12, MR=12, MT=12, MB=10;
+    const CW=PW-ML-MR, PAD=3, LHSM=4.2, LHN=5.2, CORNER=2;
+    const COL2=(CW-4)/2; // two-column width
+
+    // ── Colors (all light, print-friendly) ──
+    const BLACK  = [0,0,0];
+    const DGRAY  = [40,40,40];
+    const MGRAY  = [100,100,100];
+    const LGRAY  = [200,200,200];
+    const XLGRAY = [240,240,240];
+    const WHITE  = [255,255,255];
+    const GOLD   = [120,85,10];
+    const CRIM   = [140,20,20];
+    const PURP   = [90,30,120];
+    const STONE  = [70,60,50];
+    const TEAL   = [20,100,90];
+
+    // ── Helpers ──
+    function sf(style,size,color){ doc.setFont('helvetica',style); doc.setFontSize(size); if(color) doc.setTextColor(...color); }
+    function tw(s){ return doc.getTextWidth(String(s)); }
+    function setDraw(color,lw){ doc.setDrawColor(...color); doc.setLineWidth(lw||0.25); }
+    function setFill(color){ doc.setFillColor(...color); }
+
+    // Wrapped text — returns new y
+    function wt(text, x, y, maxW, lh, font, size, color){
+      sf(font||'normal', size||8, color||DGRAY);
+      const lines = doc.splitTextToSize(String(text||''), maxW);
+      doc.text(lines, x, y);
+      return y + lines.length*(lh||LHSM);
+    }
+
+    // Section header bar (thin, dark text, light bg)
+    function sectionBar(title, x, y, w, color){
+      setFill(XLGRAY); setDraw(color||LGRAY, 0.3);
+      doc.rect(x, y, w, 5.5, 'FD');
+      // left accent strip
+      setFill(color||STONE);
+      doc.rect(x, y, 1.5, 5.5, 'F');
+      sf('bold', 7, color||STONE);
+      doc.text(title.toUpperCase(), x+3.5, y+3.9);
+      return y+6;
+    }
+
+    // Box outline only (no fill) — returns inner start y
+    function boxOutline(x, y, w, h, accentColor){
+      setFill(WHITE); setDraw(accentColor||LGRAY, 0.3);
+      doc.roundedRect(x, y, w, h, CORNER, CORNER, 'FD');
+    }
+
+    // Measure wrapped lines height
+    function linesH(text, maxW, lh, size){
+      const tmp = doc.getFontSize();
+      if(size) doc.setFontSize(size);
+      const n = doc.splitTextToSize(String(text||''), maxW).length;
+      doc.setFontSize(tmp);
+      return n*(lh||LHSM);
+    }
+
+    // ── State ──
+    let curPage = 1;
+    let y = MT;
+
+    function newPage(){
+      doc.addPage();
+      setFill(WHITE); doc.rect(0,0,PW,PH,'F');
+      y = MT;
+      curPage++;
+    }
+
+    function ensureSpace(needed){
+      if(y + needed > PH - MB) newPage();
+    }
+
+    // ── Stat block (horizontal) ──
+    function drawStats(c, x){
+      const ATTRS=['STA','SPD','OFF','DEF','ACC','INT','AG','T','ARM','HP','M'];
+      const cw = CW/ATTRS.length;
+      ATTRS.forEach((k,i)=>{
+        const cx = x + i*cw;
+        setFill(XLGRAY); setDraw(LGRAY,0.2);
+        doc.rect(cx, y, cw, 10, 'FD');
+        sf('bold',5.5,MGRAY); doc.text(k, cx+cw/2, y+3.5,{align:'center'});
+        sf('bold',9,DGRAY);   doc.text(String(c.attrs[k]??0), cx+cw/2, y+8.5,{align:'center'});
+      });
+      y += 11;
+    }
+
+    // ── Weapon block ── returns height consumed
+    function weaponH(w, maxW){
+      let h = 5.5; // name line
+      const stats=[w.PW,w.RCH,w.STK,w.WGT].filter(v=>v&&v!=='-'&&v!=='/');
+      if(stats.length) h+=LHSM;
+      if(w.effect&&w.effect!=='-') h+=linesH(w.effect, maxW-3, LHSM, 7)+0.5;
+      return h+1.5;
+    }
+    function drawWeapon(w, x, maxW){
+      sf('bold',8,DGRAY); doc.text(w.name, x, y+3.5);
+      const mode=w.mode||'MELEE';
+      const mc=mode==='RANGED'?TEAL:mode==='NATURAL'?STONE:CRIM;
+      const bw=tw(mode)+3;
+      setFill(mc); doc.roundedRect(x+maxW-bw, y+1, bw, 3.5, 0.8,0.8,'F');
+      sf('bold',5.5,WHITE); doc.text(mode, x+maxW-bw/2, y+3.6,{align:'center'});
+      y+=6.5;
+      const stats=[]; 
+      if(w.PW&&w.PW!=='-') stats.push('PW: '+w.PW);
+      if(w.RCH&&w.RCH!=='-') stats.push('RCH: '+w.RCH);
+      if(w.STK&&w.STK!=='-') stats.push('STK: '+w.STK);
+      if(w.WGT&&w.WGT!=='/'&&w.WGT!=='-') stats.push('WGT: '+w.WGT);
+      if(stats.length){ sf('normal',7,MGRAY); doc.text(stats.join('  ·  '),x,y); y+=LHSM; }
+      if(w.effect&&w.effect!=='-'){ y=wt(w.effect,x,y,maxW-3,LHSM,'italic',7,MGRAY)+0.5; }
+      y+=1.5;
+    }
+
+    // ── Generic named+desc item ──
+    function itemH(it, maxW, size){
+      let h = size||7.5;
+      if(it.desc) h+=linesH(it.desc,maxW-3,LHSM,7);
+      return h+2;
+    }
+    function drawItem(name, desc, x, maxW, nameColor){
+      sf('bold',7.5,nameColor||DGRAY); doc.text(name,x,y+3.5); y+=6.5;
+      if(desc){ y=wt(desc,x,y,maxW-3,LHSM,'normal',7,MGRAY); }
+      y+=2;
+    }
+
+    // ── Combat art (all levels) ──
+    function combatArtH(a, maxW){
+      const m=a.name.match(/^(.+?)\s+(\d+)$/);
+      const base=m?m[1]:a.name, maxLv=m?parseInt(m[2]):1;
+      const levels=(COMBAT_ARTS[base]||[]).filter(l=>l.level<=maxLv);
+      if(!levels.length) return 8;
+      let h=5; // group label
+      for(const l of levels){ h+=5; h+=linesH(l.desc,maxW-7,LHSM-0.3,6.5)+1; }
+      return h+2;
+    }
+    function drawCombatArt(a, x, maxW){
+      const m=a.name.match(/^(.+?)\s+(\d+)$/);
+      const base=m?m[1]:a.name, maxLv=m?parseInt(m[2]):1;
+      const levels=(COMBAT_ARTS[base]||[]).filter(l=>l.level<=maxLv);
+      if(!levels.length){ sf('bold',7.5,CRIM); doc.text(a.name,x,y+3.5); y+=8; return; }
+      sf('bold',7,CRIM); doc.text(base.toUpperCase(),x,y+3.5); y+=6.5;
+      for(const l of levels){
+        const active=l.level===maxLv;
+        const rn=['I','II','III','IV','V'][l.level-1];
+        sf('bold',7,active?CRIM:MGRAY);
+        doc.text(`${rn}  ${l.name}${active?' ★':''}`,x+3,y+3.5); y+=6.5;
+        const lines=doc.splitTextToSize(l.desc,maxW-7);
+        sf('normal',6.5,MGRAY); doc.text(lines,x+6,y); y+=lines.length*(LHSM-0.3)+1;
+      }
+      y+=2;
+    }
+
+    // ── Spell block ──
+    function spellH(s, maxW){
+      let h=5.5;
+      const stats=[s.PW,s.RCH,s.STK].filter(v=>v&&v!=='-');
+      if(stats.length||s.manaCost) h+=LHSM;
+      if(s.effect) h+=linesH(s.effect,maxW-3,LHSM-0.3,6.5);
+      return h+2;
+    }
+    function drawSpell(s, hasAff, x, maxW){
+      const dc=hasAff?DGRAY:LGRAY;
+      sf('bold',7.5,dc); doc.text(s.name,x,y+3.5);
+      const elColors={Fire:CRIM,Profane:PURP,Water:TEAL,Elder:GOLD,Air:[40,100,100],Earth:STONE,Divine:GOLD};
+      const ec=elColors[s.element]||STONE;
+      const ew=tw(s.element)+3;
+      setFill(ec); doc.roundedRect(x+maxW-ew, y+1, ew, 3.5, 0.8,0.8,'F');
+      sf('bold',5.5,WHITE); doc.text(s.element, x+maxW-ew/2, y+3.6,{align:'center'});
+      y+=6.5;
+      const stats=[];
+      if(s.PW&&s.PW!=='-') stats.push('PW: '+s.PW);
+      if(s.RCH) stats.push('RCH: '+s.RCH);
+      if(s.STK&&s.STK!=='-') stats.push('STK: '+s.STK);
+      if(s.manaCost) stats.push('Mana: '+s.manaCost);
+      if(stats.length){ sf('normal',6.5,hasAff?MGRAY:LGRAY); doc.text(stats.join('  '),x,y); y+=LHSM; }
+      if(s.effect){
+        const lines=doc.splitTextToSize(s.effect,maxW-3);
+        sf('italic',6.5,hasAff?MGRAY:LGRAY); doc.text(lines,x,y); y+=lines.length*(LHSM-0.3);
+      }
+      y+=2;
+    }
+
+    // ── SECTION BLOCK: draws a titled section with items inside, handles page breaks ──
+    function drawSection(title, accentColor, contentFn, heightFn){
+      const h = heightFn() + 7;
+      // If section doesn't fit at all and we're not near top, new page
+      if(y + Math.min(h, 40) > PH - MB && y > MT + 30) newPage();
+      const startY = y;
+      y = sectionBar(title, ML, y, CW, accentColor);
+      contentFn();
+      // bottom padding
+      y += 2;
+      // thin outline around whole section
+      setDraw(accentColor||LGRAY, 0.2);
+      doc.roundedRect(ML, startY, CW, y-startY, CORNER, CORNER, 'S');
+      y += 3; // gap after section
+    }
+
+    // ── RENDER ONE CHARACTER ──
+    function renderChar(c){
+      // Always start on new page (except first char on first page)
+      if(curPage>1 || y>MT) newPage();
+      else { setFill(WHITE); doc.rect(0,0,PW,PH,'F'); }
+
+      // ── CHARACTER HEADER ──
+      // outline box, white bg
+      setFill(WHITE); setDraw(DGRAY, 0.4);
+      doc.roundedRect(ML, y, CW, 14, CORNER, CORNER, 'FD');
+      // left accent strip
+      setFill(DGRAY); doc.roundedRect(ML, y, 2, 14, CORNER, CORNER, 'F');
+      doc.rect(ML+CORNER, y, 2-CORNER, 14, 'F');
+      sf('bold',16,DGRAY); doc.text(c.name+(c.isCreature?' — Creature Tier '+c.tier:''), ML+5, y+9);
+      sf('normal',7.5,MGRAY);
+      doc.text(c.classes.join(' · ')+'  ·  '+c.size, ML+5, y+12.5);
+      if(!c.isCreature){
+        sf('bold',10,GOLD); doc.text(c.cost+' pts', ML+CW-3, y+9, {align:'right'});
+      }
+      // gold rule
+      setFill(GOLD); doc.rect(ML, y+14, CW, 0.5, 'F');
+      y += 16;
+
+      // ── STATS ──
+      drawStats(c, ML);
+
+      // Inventory
+      if(c.inventorySpace){
+        const used=c.weapons.reduce((s,w)=>{const v=parseFloat(w.WGT);return s+(isNaN(v)?0:v);},0);
+        const over=used>c.inventorySpace;
+        sf('normal',7,over?CRIM:MGRAY);
+        doc.text(`Inventory: ${used} / ${c.inventorySpace} wgt${over?' ⚠ OVER-ENCUMBERED':''}`, ML, y+3.5);
+        y+=6;
+      } else { y+=1; }
+
+      // ── TWO COLUMN: weapons (L) + skills/arts/traits (R) ──
+      // We render both columns in parallel using saved y positions
+      const xL=ML, xR=ML+COL2+4;
+      const yStart=y;
+
+      // --- LEFT COLUMN ---
+      let yL=yStart;
+
+      // Weapons
+      const wTitle='Weapons';
+      const wH=c.weapons.reduce((s,w)=>s+weaponH(w,COL2-PAD*2),0)+7+2;
+      const wStartY=yL;
+      yL = sectionBar(wTitle, xL, yL, COL2, CRIM);
+      for(let i=0;i<c.weapons.length;i++){
+        y=yL; drawWeapon(c.weapons[i], xL+PAD, COL2-PAD*2); yL=y;
+        if(i<c.weapons.length-1){ setDraw(LGRAY,0.15); doc.line(xL+PAD,yL,xL+COL2-PAD,yL); yL+=1; }
+      }
+      yL+=2;
+      setDraw(CRIM,0.2); doc.roundedRect(xL,wStartY,COL2,yL-wStartY,CORNER,CORNER,'S');
+      yL+=3;
+
+      // Upgrades (left)
+      if(c.upgrades&&c.upgrades.length){
+        const uStartY=yL;
+        yL=sectionBar('Upgrades',xL,yL,COL2,GOLD);
+        for(const u of c.upgrades){
+          y=yL; drawItem(u.name+(u.cost?` (${u.cost}pts)`:''), u.desc, xL+PAD, COL2-PAD*2, GOLD); yL=y;
+        }
+        yL+=1;
+        setDraw(GOLD,0.2); doc.roundedRect(xL,uStartY,COL2,yL-uStartY,CORNER,CORNER,'S');
+        yL+=3;
+      }
+
+      // --- RIGHT COLUMN ---
+      let yR=yStart;
+
+      // Skills
+      if(c.skills&&c.skills.length){
+        const sStartY=yR;
+        yR=sectionBar('Skills',xR,yR,COL2,STONE);
+        for(const s of c.skills){
+          y=yR; drawItem(s.name,s.desc,xR+PAD,COL2-PAD*2,DGRAY); yR=y;
+        }
+        yR+=1;
+        setDraw(STONE,0.2); doc.roundedRect(xR,sStartY,COL2,yR-sStartY,CORNER,CORNER,'S');
+        yR+=3;
+      }
+
+      // Combat Arts
+      if(c.arts&&c.arts.length){
+        const aStartY=yR;
+        yR=sectionBar('Combat Arts',xR,yR,COL2,CRIM);
+        for(const a of c.arts){
+          y=yR; drawCombatArt(a,xR+PAD,COL2-PAD*2); yR=y;
+        }
+        yR+=1;
+        setDraw(CRIM,0.2); doc.roundedRect(xR,aStartY,COL2,yR-aStartY,CORNER,CORNER,'S');
+        yR+=3;
+      }
+
+      // Traits
+      if(c.traits&&c.traits.length){
+        const tStartY=yR;
+        yR=sectionBar('Traits',xR,yR,COL2,PURP);
+        for(const t of c.traits){
+          y=yR; drawItem(t.name,t.desc,xR+PAD,COL2-PAD*2,PURP); yR=y;
+        }
+        yR+=1;
+        setDraw(PURP,0.2); doc.roundedRect(xR,tStartY,COL2,yR-tStartY,CORNER,CORNER,'S');
+        yR+=3;
+      }
+
+      // ── SYNC columns ──
+      y = Math.max(yL, yR);
+
+      // ── FULL WIDTH: Spellcrafts ──
+      if(c.spellcrafts&&c.spellcrafts.length){
+        for(const sc of c.spellcrafts){
+          const book=SPELLBOOK[sc.code];
+          if(!book) continue;
+          const avail=sc.singleSpell?book.spells:book.spells.filter(s=>s.level<=sc.level);
+          if(!avail.length) continue;
+
+          // Two-column spell layout
+          const half=Math.ceil(avail.length/2);
+          const left=avail.slice(0,half), right=avail.slice(half);
+
+          const scTitle=`${sc.name} · Lv ${sc.level}  |  Affinities: ${c.affinities.join(', ')||'—'}`;
+          const scStartY=y;
+          if(y+20>PH-MB){ newPage(); }
+          y=sectionBar(scTitle,ML,y,CW,STONE);
+
+          const xSL=ML+PAD, xSR=ML+COL2+4+PAD;
+          let ySL=y, ySR=y;
+
+          for(const s of left){
+            const hasAff=s.element==='Any'||c.affinities.includes(s.element);
+            if(ySL+spellH(s,COL2-PAD*2)>PH-MB){
+              // finish right col first on this page, then new page
+              y=Math.max(ySL,ySR);
+              setDraw(STONE,0.2); doc.roundedRect(ML,scStartY,CW,y+2-scStartY,CORNER,CORNER,'S');
+              newPage();
+              ySL=y; ySR=y;
+            }
+            y=ySL; drawSpell(s,hasAff,xSL,COL2-PAD*2); ySL=y;
+          }
+          for(const s of right){
+            const hasAff=s.element==='Any'||c.affinities.includes(s.element);
+            y=ySR; drawSpell(s,hasAff,xSR,COL2-PAD*2); ySR=y;
+          }
+          y=Math.max(ySL,ySR)+2;
+          setDraw(STONE,0.2); doc.roundedRect(ML,scStartY,CW,y-scStartY,CORNER,CORNER,'S');
+          y+=3;
+        }
+      }
+
+      // ── FULL WIDTH: Stratagems ──
+      if(c.stratagems&&c.stratagems.length){
+        if(y+20>PH-MB) newPage();
+        const stStartY=y;
+        y=sectionBar('Stratagems',ML,y,CW,STONE);
+        const half=Math.ceil(c.stratagems.length/2);
+        const sL=c.stratagems.slice(0,half), sR=c.stratagems.slice(half);
+        const xSL=ML+PAD, xSR=ML+COL2+4+PAD;
+        let ySL=y, ySR=y;
+        for(const s of sL){
+          y=ySL;
+          sf('bold',6,MGRAY); doc.text(s.type,xSL,y+3); y+=4;
+          sf('bold',7.5,DGRAY); doc.text(s.name,xSL,y+3); y+=6.5;
+          if(s.effect){ y=wt(s.effect,xSL,y,COL2-PAD*2,LHSM,'italic',7,MGRAY); }
+          ySL=y+1.5;
+        }
+        for(const s of sR){
+          y=ySR;
+          sf('bold',6,MGRAY); doc.text(s.type,xSR,y+3); y+=4;
+          sf('bold',7.5,DGRAY); doc.text(s.name,xSR,y+3); y+=6.5;
+          if(s.effect){ y=wt(s.effect,xSR,y,COL2-PAD*2,LHSM,'italic',7,MGRAY); }
+          ySR=y+1.5;
+        }
+        y=Math.max(ySL,ySR)+2;
+        setDraw(STONE,0.2); doc.roundedRect(ML,stStartY,CW,y-stStartY,CORNER,CORNER,'S');
+        y+=3;
+      }
+
+      // ── PAGE FOOTER ──
+      sf('normal',6,LGRAY);
+      doc.text('Eldfall Chronicles', ML, PH-4);
+      doc.text(`Page ${curPage}`, PW-MR, PH-4, {align:'right'});
+    }
+
+    // ── BUILD CHARACTER LIST (army + invocable creatures) ──
+    const toPrint = [...ARMY];
+
+    // Add creature profiles for any summoner in the army
+    const addedCreatures = new Set();
+    for(const c of ARMY){
+      if(!c.spellcrafts) continue;
+      for(const sc of c.spellcrafts){
+        const book = SPELLBOOK[sc.code];
+        if(!book) continue;
+        const conjSpells = book.spells.filter(s=>s.summons && s.level<=sc.level);
+        for(const sp of conjSpells){
+          const cname = sp.summons;
+          if(cname && CREATURES[cname] && !addedCreatures.has(cname)){
+            addedCreatures.add(cname);
+            toPrint.push(CREATURES[cname]);
+          }
+        }
+      }
+    }
+
+    // ── RENDER ALL ──
+    toPrint.forEach((c, i) => { if(i>0) curPage=curPage; renderChar(c); });
+
+    // ── SAVE ──
+    const faction = document.getElementById('header-faction')
+      .textContent.replace(' · Army Viewer','').trim()
+      .replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'') || 'army';
+    const date = new Date().toISOString().slice(0,10);
+    doc.save(`Eldfall_${faction}_${date}.pdf`);
+
+  } catch(e){
+    alert('PDF export error: ' + e.message + '\n' + e.stack);
+    console.error(e);
+  } finally {
+    btn.innerHTML = '<span class="icon">📄</span><span>PDF</span>';
+    btn.style.opacity = '';
+  }
+}
+
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+updateHeader();
+renderRoster();
+selectChar(0);
+</script>
+</body>
+</html>
