@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html{font-size:14px}
-html.text-lg{font-size:17px}
+html{font-size:17px}
+html.text-lg{font-size:20px}
 
 [data-theme="dark"]{
   --bg-app:#1a1e24;--bg-left:#1e2229;--bg-right:#22272f;
@@ -63,7 +63,7 @@ body{font-family:'Crimson Text',Georgia,serif;background:var(--bg-app);color:var
 .main{display:flex;flex:1;overflow:hidden}
 
 /* LEFT */
-.roster{width:310px;min-width:260px;background:var(--bg-left);border-right:1px solid var(--border-gold);overflow-y:auto;flex-shrink:0;transition:background 0.25s}
+.roster{width:360px;min-width:300px;background:var(--bg-left);border-right:1px solid var(--border-gold);overflow-y:auto;flex-shrink:0;transition:background 0.25s}
 .roster-header{position:sticky;top:0;z-index:10;background:var(--bg-roster-header);padding:8px 16px;font-family:'Cinzel',serif;font-size:0.643rem;color:var(--gold);letter-spacing:2.5px;text-transform:uppercase;border-bottom:1px solid var(--border-gold)}
 .char-card{position:relative;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;border-left:3px solid transparent}
 .char-card:hover{background:var(--bg-card-hover)}
@@ -258,6 +258,16 @@ body{font-family:'Crimson Text',Georgia,serif;background:var(--bg-app);color:var
 .spell-unavailable .item-name::after{content:' · no affinity';font-size:0.643rem;color:var(--text-dim);font-style:italic;font-family:'Crimson Text',serif;font-weight:400;margin-left:4px}
 .no-items{font-size:0.857rem;color:var(--text-dim);font-style:italic;padding:4px 0}
 
+/* Glossary terms */
+.glossary-term{
+  color:var(--gold);
+  border-bottom:1px dotted var(--gold-dim);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  display:inline;
+}
+.glossary-term:active{opacity:0.7}
+
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:rgba(128,128,128,0.05)}
 ::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:3px}
@@ -293,6 +303,8 @@ body{font-family:'Crimson Text',Georgia,serif;background:var(--bg-app);color:var
 </div>
 
 <script>
+
+
 // ── THEME / FONT ──────────────────────────────────────────────────────────────
 function toggleFont(){
   const isLg = document.documentElement.classList.toggle('text-lg');
@@ -382,11 +394,14 @@ document.addEventListener('click', function(e){
   const action = t.getAttribute('data-toggle');
   const id     = t.getAttribute('data-id');
   if(action === 'class'){
-    document.getElementById('badge-'+id)?.classList.toggle('open');
-    document.getElementById('classpanel-'+id)?.classList.toggle('open');
+    const term = t.getAttribute('data-term');
+    if(term) openGlossary(term);
   } else if(action === 'cat'){
-    document.getElementById('cat-'+id)?.classList.toggle('open');
-    document.getElementById('catdesc-'+id)?.classList.toggle('open');
+    const term = t.getAttribute('data-term');
+    if(term) openGlossary(term);
+  } else if(action === 'glossary'){
+    const term = t.getAttribute('data-term');
+    if(term) openGlossary(term);
   } else if(action === 'dismiss'){
     const iid = parseFloat(t.getAttribute('data-iid'));
     if(iid) dismissCreature(iid);
@@ -394,7 +409,8 @@ document.addEventListener('click', function(e){
     const creature = t.getAttribute('data-creature');
     if(creature) summonCreature(creature);
   } else if(action === 'accordion'){
-    document.getElementById('acc-'+id)?.classList.toggle('open');
+    const term = t.getAttribute('data-term');
+    if(term) openGlossary(term);
   }
 });
 
@@ -622,9 +638,14 @@ let BASE_ARMY = [
 let ARMY = [...BASE_ARMY];
 let selected = null;
 let summonedCreatures = []; // {id, creatureName, instanceId}
+let _armyPtsFromJSON = null; // set when loading from JSON
 
 function totalPts(){
-  return BASE_ARMY.reduce((s,c)=>s+c.cost,0);
+  if(_armyPtsFromJSON !== null) return _armyPtsFromJSON;
+  return BASE_ARMY.reduce((s,c)=>{
+    const upgCost = (c.upgrades||[]).reduce((u,upg)=>u+(upg.cost||0),0);
+    return s + (c.cost||0) + upgCost;
+  },0);
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
@@ -698,7 +719,14 @@ function renderRoster(){
         <div class="char-name">${c.name}</div>
         <div class="char-class">${classStr}</div>
         <div class="attrs-row">
-          ${['STA','SPD','OFF','DEF','ACC','AG','ARM','HP'].map(k=>`
+          ${['STA','SPD','OFF','DEF','ACC','INT'].map(k=>`
+            <div class="attr-cell">
+              <span class="attr-key">${k}</span>
+              <span class="attr-val">${c.attrs[k]}</span>
+            </div>`).join('')}
+        </div>
+        <div class="attrs-row" style="margin-top:3px">
+          ${['AG','T','ARM','HP','M'].map(k=>`
             <div class="attr-cell">
               <span class="attr-key">${k}</span>
               <span class="attr-val">${c.attrs[k]}</span>
@@ -721,10 +749,9 @@ function renderDetail(c){
     if(!desc) return `<span class="class-badge badge-${color}">${cl}</span>`;
     return `
       <span>
-        <span class="class-badge badge-${color}" id="badge-${uid}" data-toggle="class" data-id="${uid}">
-          ${cl} <span class="badge-chevron">▾</span>
+        <span class="class-badge badge-${color}" data-toggle="class" data-term="${cl}">
+          ${cl} <span style="font-size:0.571rem;opacity:0.7">ⓘ</span>
         </span>
-        <div class="class-desc-panel" id="classpanel-${uid}">${desc}</div>
       </span>`;
   }).join('');
 
@@ -761,17 +788,16 @@ function renderDetail(c){
     return `
     <div class="weapon-card">
       <div class="weapon-name">${w.name}${w.qty>1?` <span style="font-size:0.786rem;color:var(--text-dim)">×${w.qty}</span>`:''}</div>
-      <span class="weapon-cat mode-${(w.mode||'melee').toLowerCase()}" id="cat-${uid}" data-toggle="cat" data-id="${uid}">
-        ${finalCatLabel} <span class="cat-chevron">▾</span>
+      <span class="weapon-cat mode-${(w.mode||'melee').toLowerCase()}" data-toggle="cat" data-term="${finalCatKey}">
+        ${finalCatLabel} <span style="font-size:0.571rem;opacity:0.7">ⓘ</span>
       </span>
-      <div class="cat-desc" id="catdesc-${uid}">${finalCatDesc}</div>
       <div class="weapon-stats">
         ${w.PW&&w.PW!=='-'?`<div class="weapon-stat">PW <span>${w.PW}</span></div>`:''}
         ${w.RCH&&w.RCH!=='-'?`<div class="weapon-stat">RCH <span>${w.RCH}</span></div>`:''}
         ${w.STK&&w.STK!=='-'?`<div class="weapon-stat">STK <span>${w.STK}</span></div>`:''}
         ${w.WGT&&w.WGT!=='/'?`<div class="weapon-stat">WGT <span>${w.WGT}</span></div>`:''}
       </div>
-      ${w.effect&&w.effect!=='-'?`<div class="weapon-effect">${w.effect}</div>`:''}
+      ${w.effect&&w.effect!=='-'?`<div class="weapon-effect">${markTerms(w.effect)}</div>`:''}
     </div>`;
   }).join('');
 
@@ -779,35 +805,29 @@ function renderDetail(c){
   const skillsHTML = c.skills.map(s=>`
     <div class="item-card">
       <div class="item-name">${s.name}</div>
-      <div class="item-desc">${s.desc}</div>
+      <div class="item-desc">${markTerms(s.desc)}</div>
     </div>`).join('');
 
   // Combat Arts — todos los niveles hasta el asignado, con acordeón por nivel
   const artsHTML = c.arts.map((a,ai)=>{
     // Extraer nombre base y nivel del string "Fencing 2" → {base:"Fencing", level:2}
     const m = a.name.match(/^(.+?)\s+(\d+)$/);
-    if(!m) return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${a.desc}</div></div>`;
+    if(!m) return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${markTerms(a.desc)}</div></div>`;
     const base = m[1];
     const maxLevel = parseInt(m[2]);
     const artData = COMBAT_ARTS[base];
     if(!artData){
-      return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${a.desc}</div></div>`;
+      return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${markTerms(a.desc)}</div></div>`;
     }
     const levelsHTML = artData.filter(l=>l.level<=maxLevel).map(l=>{
-      const uid=`${charId}_art${ai}_l${l.level}`;
       return `
-        <div class="accordion${l.level===maxLevel?' open':''}" id="acc-${uid}">
-          <div class="accordion-trigger" data-toggle="accordion" data-id="${uid}">
-            <div class="accordion-trigger-left">
-              <span style="font-family:'Cinzel',serif;font-size:0.643rem;color:var(--crimson);min-width:16px">
-                ${['I','II','III','IV','V'][l.level-1]}
-              </span>
-              <span style="font-family:'Cinzel',serif;font-size:0.857rem;color:var(--text-primary)">${l.name}</span>
-              ${l.level===maxLevel?' <span style="font-size:0.600rem;color:var(--crimson);margin-left:4px">★</span>':''}
-            </div>
-            <span class="accordion-chevron">▾</span>
+        <div class="item-card${l.level===maxLevel?' crimson-left':''}" style="margin-bottom:6px;${l.level<maxLevel?'opacity:0.65':''}">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+            <span style="font-family:'Cinzel',serif;font-size:0.643rem;color:var(--crimson);min-width:16px">${['I','II','III','IV','V'][l.level-1]}</span>
+            <span style="font-family:'Cinzel',serif;font-size:0.857rem;color:var(--text-primary)">${l.name}</span>
+            ${l.level===maxLevel?'<span style="font-size:0.600rem;color:var(--crimson);margin-left:4px">★</span>':''}
           </div>
-          <div class="accordion-body">${l.desc}</div>
+          <div class="item-desc">${markTerms(l.desc)}</div>
         </div>`;
     }).join('');
     return `<div style="margin-bottom:10px">
@@ -820,14 +840,14 @@ function renderDetail(c){
   const traitsHTML = c.traits.map(t=>`
     <div class="item-card purple-left">
       <div class="item-name">${t.name}</div>
-      <div class="item-desc">${t.desc}</div>
+      <div class="item-desc">${markTerms(t.desc)}</div>
     </div>`).join('');
 
   // Upgrades
   const upgradesHTML = (c.upgrades||[]).map(u=>`
     <div class="item-card gold-left">
       <div class="item-name">${u.name}<span class="item-cost">(${u.cost} pts)</span></div>
-      <div class="item-desc">${u.desc}</div>
+      <div class="item-desc">${markTerms(u.desc)}</div>
     </div>`).join('');
 
   // Spellcrafts
@@ -856,7 +876,7 @@ function renderDetail(c){
               ${s.STK&&s.STK!=='-'?`<div class="item-stat">STK <span>${s.STK}</span></div>`:''}
               <span style="font-size:0.714rem;color:var(--text-dim);font-style:italic">${s.type.join(', ')}</span>
             </div>
-            <div class="item-desc">${s.effect}</div>
+            <div class="item-desc">${markTerms(s.effect)}</div>
             ${summonBtn}
           </div>`;
       }).join('');
@@ -877,7 +897,7 @@ function renderDetail(c){
     <div class="item-card stone-left">
       <div class="item-label">${s.type}</div>
       <div class="item-name">${s.name}</div>
-      <div class="item-desc">${s.effect}</div>
+      <div class="item-desc">${markTerms(s.effect)}</div>
     </div>`).join('');
 
   // Dismiss (creatures)
@@ -997,7 +1017,11 @@ function parseSpellGroup(sp){
 function parseArmy(data){
   const chars = data.armyCharacterList || [];
   const factionRaw = chars[0]?.attributes?.factions?.data?.[0]?.attributes?.name || 'Unknown';
-  const totalPts = chars.reduce((s,c)=>s+c.attributes.recruitment_cost, 0);
+  const totalPts = data.armyPts || chars.reduce((s,c)=>{
+    const upgCost = (c.attributes.appliedArmyCharacterUpgrades||[])
+      .reduce((u,upg)=>u+(upg.upgrade?.attributes?.cost||0),0);
+    return s + c.attributes.recruitment_cost + upgCost;
+  }, 0);
 
   const parsed = chars.map(c=>{
     const a = c.attributes;
@@ -1106,6 +1130,7 @@ function loadArmyFromJSON(jsonData){
     ARMY.push(...BASE_ARMY);
     summonedCreatures.length = 0;
     selected = null;
+    _armyPtsFromJSON = parsed.totalPts;
 
     // Update header faction
     document.getElementById('header-faction').textContent =
@@ -1281,6 +1306,9 @@ function exportPDF(){
       if(desc){ y=wt(desc,x,y,maxW-3,LHSM,'normal',7,MGRAY); }
       y+=2;
     }
+
+    // ── markTerms for HTML rendering ──
+    function mt(text){ return markTerms(text); }
 
     // ── Combat art (all levels) ──
     function combatArtH(a, maxW){
@@ -1580,6 +1608,298 @@ function exportPDF(){
   }
 }
 
+
+// ── GLOSSARY ──────────────────────────────────────────────────────────────────
+const GLOSSARY = {
+
+  // ── ATTRIBUTES ──
+  "STA":  "Stamina — indicates the default number of Activation Points a model receives at the beginning of its every turn, and how swiftly it can wield certain Items.",
+  "SPD":  "Speed — indicates the default distance in inches that a model can cross on the field when moving.",
+  "OFF":  "Offense — indicates a model's default active melee capability used during its Active Role to conduct a Melee Attack.",
+  "DEF":  "Defense — indicates a model's default reactive melee capability used during its Reactive Role to conduct a Melee Attack.",
+  "ACC":  "Accuracy — indicates a model's default capability with ranged projectile weapons used when performing Ranged Attacks.",
+  "INT":  "Intellect — indicates a model's default mental dexterity and often its capability of casting Spells and perceiving its surroundings.",
+  "AG":   "Agility — indicates the default physical nimbleness and kinesthetic capability of a model, mainly used when avoiding incoming attacks (with Dodge) and escaping certain dangers.",
+  "T":    "Toughness — indicates the default physical strength and endurance of a model.",
+  "ARM":  "Armor — indicates the default amount of natural or artificial protection the model has in order to cope with the received Power of a Hit.",
+  "HP":   "Health Points — indicates the default health of a model, or how many Wounds it can withstand before becoming Incapacitated.",
+  "M":    "Morale — indicates the default mental fortitude of a model.",
+
+  // ── CORE MECHANICS ──
+  "Awareness":         "An area surrounding the model with a radius in inches equal to the model's Agility (AG) value, measured from the edge of the base. A model is within another's Awareness as long as its Hitbox is within or in contact with that area.",
+  "Line of Sight":     "An imaginary straight line connecting the Hitboxes of two models. A model has LoS to another if it can draw an unobstructed straight line from a point on its Hitbox to a point on the target's Hitbox. Unless specified otherwise, a model can draw LoS only from its Front arc.",
+  "LoS":               "Line of Sight — an imaginary straight line connecting the Hitboxes of two models. A model has LoS to another if it can draw an unobstructed straight line from a point on its Hitbox to a point on the target's Hitbox.",
+  "Base Contact":      "A situation where a model's Hitbox is in physical contact with another model's Hitbox, token, or piece of scenery. A model's Movement automatically ends if it enters Base Contact with an enemy model.",
+  "Activation Points": "A resource generated from the model's Stamina (STA) value. Players spend these points when activating the model or reacting with it.",
+  "AP":                "Activation Points — a resource generated from the model's Stamina (STA) value, spent when activating or reacting.",
+  "Active Role":       "The role of the player currently conducting their turn. Active Role models perform Activations (Normal Movement + Normal Action, Idle + Special Action, or Special Movement + Nothing).",
+  "Reactive Role":     "The role of the player whose models react to the Active Player's Activations. Reactive models may spend AP to declare Reactions.",
+  "Casting Aura":      "An area equal in size to the caster's Awareness. Spells with Casting Aura Reach can only target models within this area. In the Active Role, the caster can target models within the Casting Aura even without LoS, but the casting attribute is halved in that case.",
+  "Critical Hit":      "When the result of a dice roll is 1, it is a Critical Hit. A Critical Hit reduces the target model's ARM to 0 for that particular Hit only. A Critical Hit beats all opponent's Confrontation roll results.",
+  "Confrontation":     "Occurs when two opposing models declare the Attack Action against one another. Both models fight simultaneously, attempting to block incoming Strikes. Only the model that performs one or more successful rolls wins the Confrontation — successful rolls from the winner cancel equal-value rolls from the loser.",
+  "Wound":             "When a Damage Roll is successful, it inflicts a Wound: the target loses 1 HP unless stated otherwise.",
+  "Mana Counter":      "A resource representing mana, required for casting Conjuration-type Spells and other powerful Spells. Mages can convert Activation Points into Mana Counters. Mana Counters are cumulative and do not disappear at end of turn.",
+  "Assist":            "An Action where an activated model targets itself or one or more allied models, most commonly used to cast support Spells (Enchantments, Healing, etc.).",
+  "Dodge":             "An Action to avoid an incoming attack. The model performs an Agility roll using 1 die. On success, non-critical Hits from the enemy's Attack are ignored. To declare Dodge in Reactive Role, the model must have LoS to the attacker or the attacker must be within its Awareness.",
+  "Idle":              "A model declares Idle when it performs no Movement or uses no Action Steps. It may still declare Reactions.",
+  "Strategic Phase":   "The phase at the start of each model's turn during which models may trigger strategic abilities, enter or cancel the Crouched State voluntarily, or perform other strategic actions.",
+  "Deployment Zone":   "The area of the battlefield where a player places their models at the start of the game.",
+  "AoE":               "Area of Effect — the attack or spell affects all models within a defined area rather than a single target.",
+  "Spray":             "A cone-shaped AoE template. S = Small cone, L = Large cone.",
+  "Circular":          "A circular AoE template centred on the target point. S = Small radius, L = Large radius.",
+  "Summoning Limit":   "The maximum number of copies of a summoned creature that can be on the field simultaneously. Equal to the creature's Tier.",
+
+  // ── STATES ──
+  "Bleeding":      "A model in this State must perform a Toughness roll in its every Strategic Phase. A failed roll causes the model to suffer a Wound.",
+  "Blinded":       "A model in this State has no LoS (other than to itself) and cannot perform any Actions other than Assist, Dodge, or Nothing.",
+  "Confused":      "A model in this State has halved Offense, Defense, Accuracy, Intellect, Agility, and Morale.",
+  "Crippled":      "A model in this State has halved Speed and Agility.",
+  "Crouched":      "The model's Hitbox becomes the size of its base. Speed and Armor are halved and Attack Strike becomes 1. Crouched models cannot make others Engaged. During Movement Step, may only declare Walk or Idle. Can be cancelled voluntarily during Movement Step in Active Role, or with a Dodge.",
+  "Dead":          "A Dead model's Hitbox becomes the size of its base. It cannot receive AP, activate, or react. Unless stated otherwise it cannot use Skills, Traits, Upgrades, or Items, and is ignored for scoring. An Incapacitated model that suffers another Wound automatically becomes Dead.",
+  "Engaged":       "During the Movement Step in the Active Role, an Engaged model may only declare Idle or Walk (only toward the engaging enemy). While Engaged, a model may only declare Melee Attack, Assist (targeting itself), or Dodge. A model ceases to be Engaged when it leaves the enemy's Melee Weapon Reach, Disengages with a Dodge, or the enemy becomes Incapacitated, Petrified, Crouched, or Dead.",
+  "Fatigued":      "A model in this State cannot regain AP during the Upkeep Phase. This State is cancelled at the beginning of this model's next Strategic Phase.",
+  "Flying":        "While Flying: SPD is doubled, Melee Attack Strike is 1, the model may move over scenery and models, cannot benefit from Cover, always has LoS to all models (and all models have LoS to it), and cannot become Engaged or cause Engaged. Automatically cancelled if the model becomes Incapacitated, Dead, Immobilized, Petrified, or Crouched.",
+  "Immobilized":   "A model in this State cannot perform any Movement, Special Movement, or Special Action. Can be cancelled with a successful Dodge (using AG or T, but without moving or entering/cancelling Crouched unless the Dodge succeeds).",
+  "Incapacitated": "When a model's HP reaches 0, it becomes Incapacitated and immediately enters the Crouched State. It cannot receive AP or perform Activations or Reactions. This State is cancelled if the model regains at least 1 HP.",
+  "Panicked":      "A Panicked model must perform a Morale roll at the beginning of each Activation or Reaction. On a failed Active Role roll, it must perform a full Run toward the nearest field edge. On a failed Reactive Role roll, it can only declare Dodge toward the edge or Nothing.",
+  "Poisoned":      "A model in this State must perform a Toughness roll with a −6 modifier in its every Strategic Phase. A failed roll causes the model to suffer a Wound.",
+  "Shrouded":      "While Shrouded, the model is represented by a token. It cannot be the target of Actions other than Perceive. The State is cancelled if the model declares a Normal Action (other than Nothing) or Special Action. Performing an Attack while Shrouded reveals the model but grants Surprise Attack to that Attack.",
+  "Slowed":        "A model in this State has halved SPD.",
+  "Weakened":      "A model in this State has halved Toughness and −1 Stamina.",
+
+  // ── WEAPON & ATTACK TRAITS ──
+  "Armor-Piercing":   "When making a DMG roll for a Hit with this Trait, add only half the target's ARM value.",
+  "Bleed":            "If a model suffers at least one Wound with this Trait, it enters the Bleeding State.",
+  "Burn":             "If a model suffers at least one Wound with this Trait, the attacker may perform X DMG rolls with ARM value 0. Each successful roll causes a Wound. If this kills the model, it is removed from the field.",
+  "Burning":          "If a model suffers at least one Wound with this Trait, the attacker may perform X DMG rolls with ARM value 0. Each successful roll causes a Wound.",
+  "Cleave":           "If a model suffers at least one Wound with this Trait, it suffers an additional Wound.",
+  "Continuous":       "An effect with this Trait remains in play until the end of the Quest or until removed by another effect, regardless of other imposed time durations.",
+  "Crippling":        "If a model suffers at least one Wound with this Trait, it must perform a T roll. A failed roll causes it to become Crippled.",
+  "Focus":            "Spells or Items with this Trait do not require a target. The caster becomes the centre of the effect, and models within the Casting Aura are affected.",
+  "Frostbite":        "If a model suffers at least one Wound with this Trait, it must perform a single Toughness roll. On a failed roll, the model suffers an additional Wound.",
+  "Ignore Armor":     "A Hit with this Trait reduces the target's ARM to 0 for the DMG roll duration.",
+  "Ignore Shield":    "Attacks with this Trait ignore the effects of Shields.",
+  "Knockback":        "During the Resolution Step, a model Hit with this Trait is moved X inches away from the attacker (attacker's choice of direction). Does not affect models two or more Sizes larger than the attacker.",
+  "Knockdown":        "A model that suffers a Hit with this Trait becomes Crouched. Does not affect models two or more Sizes larger than the attacker.",
+  "Mana Cost":        "To cast a Spell with this Trait, the caster must spend Mana Counters equal to the stated value.",
+  "Mindgame":         "A Dodge against this Trait uses INT instead of AG. If the model suffers a Mindgame Hit with PW, it rolls INT instead of a Damage Roll. On a failed roll, it suffers damage.",
+  "Poison":           "Lv I (Weak Poison): If a model suffers a Wound, it becomes Weakened until its next Strategic Phase. Lv II (Strong Poison): If a model suffers a Wound, it becomes Weakened and Poisoned.",
+  "Ricochet":         "When a model is hit, the nearest enemy within 5\" is also hit by the same Attack. This can repeat up to X times per Activation Sequence, but cannot target the same model more than once.",
+  "Spellbound":       "A model or Item with this Trait is permanently enchanted by the listed Enchantment Spell. The Spell remains active for the entire game.",
+  "Stagger":          "A model that suffers a Hit with this Trait loses 1 Activation Point until the end of the turn. Does not affect models two or more Sizes larger than the attacker.",
+  "Stun":             "A model that suffers at least one Wound with this Trait must perform a T roll. If failed, the model loses all AP until the end of the turn.",
+  "Surprise Attack":  "An Attack with this Trait halves the target model's OFF, DEF, ACC, AG, and INT until the end of the Activation Sequence.",
+  "Survival":         "This model is unaffected by the specified Environment type.",
+  "Sweep":            "Lv I: On a successful Attack roll, all models within this model's LoS and Melee RCH suffer a Hit. Lv II: The model's Front arc becomes 360° for the Activation Sequence, and all models within Melee RCH and LoS suffer a Hit.",
+  "Targetless":       "The Attack or Spell does not require a model as a target — the target can be any field surface. If it has both Casting Aura and AoE Reach, the template must be placed wholly within the Casting Aura.",
+  "Throwing":         "Enables a Ranged Attack with RCH equal to the user's T. STK can be up to the Item's QTY. Remove QTY equal to STK after use. If the Attack incapacitates or kills the target, the item can be recovered by moving into Base Contact.",
+  "Trample":          "When declaring Run, this model can move through any model of smaller Size. Each model moved through suffers a Hit with Knockdown and PW equal to this model's T. The reacting model can avoid it with a successful Dodge.",
+  "Two-Handed":       "A Weapon with this Trait cannot be used alongside a Shield or another Weapon.",
+  "Unstoppable":      "If the target of an Attack is smaller, Confrontation does not occur. Successful Attack rolls from either model do not block the other's.",
+  "Weakening":        "If this model suffers a Wound with this Trait, it becomes Weakened.",
+
+  // ── MODEL TRAITS ──
+  "Advantage":         "Once per Activation Sequence, this model may reroll any number of dice (once) during an Attack Action against a target with the specified characteristic (Size, Class, Trait, etc.).",
+  "Affinity":          "This model can cast Spells of the specified Element (e.g. Fire, Water, Profane, Elder, Earth, Air, Divine).",
+  "Acute Senses":      "This model may perform Perceive and Uncover Actions using AG instead of INT. Its Awareness increases by 3 inches. When Dodging without LoS, its AG is not halved.",
+  "Brute":             "This model gains +1 STK when using Two-Handed Items and ignores Two-Handed restrictions.",
+  "Construct":         "Unaffected by: Surprise Attack, Stagger, Vampirism, Mindgame, Burn. Immune to Charm and Toxic Environment. Cannot enter Panicked, Bleeding, Poisoned, Weakened, or Confused States. HP-leeching abilities do not affect it. Cannot regain HP from Spells or Skills without the Earth Element. If HP reaches 0, removed from the field.",
+  "Demon":             "When this model deals a Wound, the target must perform an M roll. On failure, the target becomes Panicked until end of turn. A Critical Hit automatically Panics the target. This model gets +4 Attack modifier against Panicked targets. Does not affect models with the Demon Trait.",
+  "Duelist":           "The target of this model's Attack cannot use Combat Arts of level III or lower.",
+  "Elemental":         "Unaffected by: Stagger, Vampirism, Mindgame. Immune to Charm and Toxic Environment. Cannot enter Bleeding, Poisoned, or Weakened States. If HP reaches 0, removed from the field.",
+  "Elemental Essence": "Unaffected by Effects from Attacks of the specified Element (still suffers damage). Deals Magical Damage of that Element with Melee Attacks using Natural Weapons.",
+  "Familiar":          "When summoned by a Conjuration Spell, the caster gains extra Abilities and Stat Modifiers listed on the creature's profile. If the caster would suffer Wounds, the Familiar may be removed instead. Has no Summoning Limit, but the caster may control only one of each named Familiar.",
+  "Fearless":          "This model cannot become Panicked.",
+  "Incorporeal":       "The PW of Hits without Spell Type or Burn against this model is halved. It ignores Environment rules and Movement penalties, can move through obstacles and vertically. Cannot end within an obstacle and cannot become Engaged.",
+  "Inspiring":         "Other allied models within this model's Awareness and with the same Affiliation gain +6 M.",
+  "Intimidating":      "Models in the Panicked State with LoS toward this model suffer −6 M.",
+  "Menacing":          "Models with LoS to this model suffer a −2 M modifier for every level of this ability.",
+  "Resistance":        "Lv I: The PW of Hits of the specified Type or Trait against this model is halved. Lv II: Hits and Effects from Attacks of that Type or Trait are negated entirely.",
+  "Resourceful":       "Lv I: This model may receive 1 additional Upgrade. Lv II: This model may receive another additional Upgrade.",
+  "Strategist":        "This model can use two Stratagems of different names in its Strategic Phase.",
+  "Tactician":         "The Deployment Zone of the party containing this model is extended by 5 inches toward the middle of the field.",
+  "Undead":            "Lv I: Cannot be affected by Poisoned, Weakened, Bleeding, or Panicked States. Mindgame Trait Spells cannot target it. Divine Healing Spells deal 15 PW damage instead of restoring HP. If HP reaches 0, becomes Dead.",
+  "Unkeen":            "If this model would suffer a Wound, it must perform a T roll. On failure the Wound is inflicted; on success it is negated.",
+  "Vampirism":         "When this model deals a Wound, it regains 1 HP.",
+  "Vigilance":         "Immune to the Surprise Attack Trait. Has a 360° Front arc and no Back arc.",
+  "Watchful":          "This model receives double Activation Points in its Reactive Role.",
+
+  // ── SKILLS ──
+  "Backstab":      "During an Attack against a target that lacks LoS to this model: Hits gain +3 PW, and one Strike automatically becomes a Hit (not included in Confrontation). If this model loses the Confrontation roll, both models may still score Hits.",
+  "Chain Attack":  "Once per Activation Sequence, when an allied model scores a Hit against an enemy within this model's LoS, this model may perform an unmodified STK 1 Attack against that enemy (before DMG rolls). Does not consume AP.",
+  "Charm":         "Lv I: An enemy declaring Reaction against this model must first perform an INT roll. On failure, it may only declare Nothing until end of Activation Sequence. Lv II: On failed roll, it must also Walk toward this model for full SPD.",
+  "Clairvoyance":  "In Reactive Role, this model may declare Reactions using Casting Aura Spells targeting enemies within Awareness without LoS. It ignores LoS restrictions from Environments, the Blinded State, and the Surprise Attack Trait.",
+  "Climbing":      "This model may perform the Climb Special Movement as Normal Movement, ignoring related Movement penalties. SPD is not halved while Climbing.",
+  "Dash":          "When performing a Run Special Movement, this model may declare an unmodified STK 1 Melee Attack in its Action Step.",
+  "Dual-Wield":    "May replace a Shield with a second Melee Weapon (both must have RCH ≤1 and lack Two-Handed). May reroll one Melee Attack roll; must choose which Weapon's PW and STK apply. May apply Effects of both Weapons.",
+  "Fencing":       "See Combat Art: Fencing.",
+  "Finishing Strike": "When this model causes at least one Wound, it may immediately make an unmodified STK 1 Attack against the same target using the same Item or Skill.",
+  "Flicker":       "When declaring Movement, this model may ignore obstacles and other models, moving in any direction including vertically. Distance is measured as a straight line. Cannot end Movement on another model or inside scenery.",
+  "Flight":        "This model may enter or cancel the Flying State during its Movement Step. Cannot be affected by Fall Damage. Cannot enter Flying if Engaged.",
+  "Follow-Up":     "If an enemy disengages from this model, it may move up to half its SPD toward the disengaged model.",
+  "Foresight":     "When this model becomes the target of an Attack in Reactive Role and did not declare a Reaction during the Reaction Step, it may declare a Reaction during the Action Step instead, after the Active model has declared its Action.",
+  "Hit and Retreat": "During its Movement Step, this model may cancel its Engaged State. If it declares an Attack during its Activation, it may perform an additional Walk at the end of the Resolution Step.",
+  "Impede":        "When this model declares an Attack of Opportunity with a Melee Attack against a non-Engaged model, that model's Movement ends at the point of the Attack and the target becomes Engaged immediately.",
+  "Infiltration":  "Lv I: Deploy this model up to the middle line of your half of the field. Lv II: Deploy this model anywhere outside the opponent's Deployment Zone.",
+  "Leap":          "This model may perform the Jump Special Movement as Normal Movement. SPD is not halved while Jumping.",
+  "Protector":     "When an ally within ½ SPD is targeted by an Attack during this model's Reactive Role, this model may spend 1 AP to move into Base Contact with the ally and become the new target of the Attack.",
+  "Regeneration":  "During its Strategic Phase, this model may regain 1 HP per Skill level and can cancel Bleeding, Weakened, and Crippled States.",
+  "Snipe":         "STK of an Attack using this ability is 1 and cannot be modified. This model ignores Cover and Ranged Friendly Fire.",
+  "Stealth":       "Lv I: If this model activates or enters an enemy's Awareness, that enemy cannot declare a Reaction unless it has LoS to this model. Lv II: Deploy this model in Shrouded State. If no enemy has LoS, it may re-enter Shrouded during its Strategic Phase.",
+  "Taunt":         "Only usable during Movement. All enemy models with LoS to or with this model in their Awareness must perform an INT roll. On failure, the enemy must declare a Reaction against this model if possible.",
+  "Tracking":      "This model gains +3 to Perceive and Uncover Actions, does not suffer the INT penalty for Uncover, and may reroll one roll when performing Perceive.",
+
+  // ── CLASSES ──
+  "ALCHEMIST":   "Consumables replenish during the Strategic Phase. When casting a Transmutation-Type Spell, may Reroll up to 1 failed roll.",
+  "ARMSMASTER":  "In the Active Role, may gain +1 Strike when performing a Melee Attack.",
+  "ARTIFICER":   "During the Strategic Phase, may select an Enchantment Spell available to them and apply its effect to themselves without a roll, until their next Strategic Phase.",
+  "ASSASSIN":    "Scores a Critical Hit on roll results of 1, 2, or 3.",
+  "BERSERKER":   "Once per turn, if this model would suffer one or more Wounds from Damage Rolls, it may perform a Toughness roll for every Wound. A successful roll prevents that Wound.",
+  "CIVILIAN":    "No particular Class abilities. Some Quests may add a specific Effect to the Civilian Class.",
+  "CREATURE":    "No particular Class abilities. Some Quests may add a specific Effect to the Creature Class.",
+  "DRUID":       "Gains +4 Modifier when casting Earth Spells. Can choose to cast Spells using either Intellect or Morale.",
+  "ENCHANTER":   "May cast Enchantment-Type Spells on allied models without performing a roll.",
+  "MAGE":        "When casting a Spell, may spend an unspent AP to Reroll any number of dice. In the Active Role, can convert any number of APs into Mana Counters. Mana Counters are cumulative and do not disappear at end of turn.",
+  "MARKSMAN":    "If this model declares Idle during its Movement Step, it gains +4 Accuracy until the end of the Activation Sequence.",
+  "MYSTIC":      "Must use the Morale value instead of Intellect when casting Spells.",
+  "RANGER":      "In the End Phase of the Active Role, may perform a Normal Movement. This does not provoke a Reaction from the Reactive Player.",
+  "ROGUE":       "Once per Activation, on at least one successful Hit against the target, may perform one AG roll. If successful, the Hit gains Knockdown.",
+  "SENTINEL":    "In the Reactive Role, may gain +1 Strike when performing an Attack.",
+  "SOLDIER":     "Gains +1 OFF, +1 DEF, +1 ACC, +1 INT, and +1 M for each other Soldier from the same Party within Awareness that is not Incapacitated or Dead. Maximum bonus: +3.",
+  "SORCERER":    "In the Active Role, when casting a Sorcery-Type Spell, may Reroll up to 1 failed roll.",
+  "SUMMONER":    "Can start the game with a Tier II or lower summoned creature in its Awareness (no roll or AP required). Shares its Mana pool with other Summoners in the party. If Incapacitated, accumulated Mana Counters are discarded.",
+  "VITALIST":    "Can cast Healing-Type Spells on allied models that are not Incapacitated or Dead without performing a roll.",
+  "WARRIOR":     "During the Strategic Phase, may shift to Defensive Stance (place a token). In Defensive Stance: Strike is 1 in Active Role but retains default Strike in Reactive Role. Lasts until next Strategic Phase.",
+  "WIZARD":      "When casting a Spell of the Elder Element, may Reroll up to 1 failed roll.",
+
+  // ── SPELL TYPES ──
+  "Sorcery":       "Sorcery-Type Spells have short-lasting, destructive effects. Unless specified otherwise, the effect lasts until the end of the Activation Sequence.",
+  "Healing":       "Healing-Type Spells restore HP or remove negative States. Their effect is immediate unless stated otherwise.",
+  "Enchantment":   "Enchantment-Type Spells apply a persistent buff or debuff to a model until a specified condition removes it.",
+  "Transmutation": "Transmutation-Type Spells alter the environment or transform objects and areas on the field.",
+  "Conjuration":   "Conjuration-Type Spells summon creatures to the field. Summoned creatures follow normal game rules.",
+
+  // ── SIZES ──
+  "Small":    "Size category. Can be affected by Knockback and Knockdown from any attacker.",
+  "Medium":   "Standard Size category.",
+  "Large":    "Size category. Not affected by Knockdown or Stagger from Small or smaller attackers.",
+  "Huge":     "Size category. Not affected by Knockdown or Stagger from Medium or smaller attackers.",
+  "Gigantic": "Size category. Not affected by Knockdown or Stagger from Large or smaller attackers.",
+  "Colossal": "Size category. Not affected by Knockdown, Stagger, or Knockback from Gigantic or smaller attackers.",
+  "Epic":     "Largest Size category. Not affected by Knockdown, Stagger, or Knockback from Colossal or smaller attackers.",
+
+  // ── ENVIRONMENTS ──
+  "Aquatic":        "Shallow: Models move at half SPD and AG is halved. Burn I is negated; Burn II/III reduced by one level. Deep: All Shallow effects plus models cannot declare Jump, Attack, Assist, or Ritual. Models with ARM 2+ may drown on activation failure.",
+  "Dangerous":      "When a model moves onto or touches this Environment, it suffers 1 Wound unless it declares Dodge and passes an AG roll. Does not affect Elemental, Construct, Spirit, Undead, or Flying models.",
+  "Dark":           "LoS is limited to within Awareness. Models targeting another model outside half their Awareness suffer −3 modifier.",
+  "Dense":          "Melee Attacks with RCH ≥1 suffer −1 STK. Ranged Attacks within or through the area suffer −1 STK. Flying and Mounted models cannot enter.",
+  "Difficult":      "Models move through this Environment at half SPD (2 inches of Movement spent per inch moved). Does not affect models with Flicker or in Flying State.",
+  "Forest":         "Ranged Attacks within or through suffer −3 Attack modifier. LoS cannot be drawn through two or more Forest areas.",
+  "Freezing":       "During Strategic Phase, models must perform a T roll with +ARM modifier. On failure, the model becomes Fatigued. Models with 1+ Wounds must perform another T roll; on failure, suffer 1 Wound.",
+  "Hazy":           "Ranged Attacks cannot target through the area. Ranged Attacks from within or into suffer halved Attack modifier. Melee Attacks outside Base Contact suffer −3 modifier.",
+  "Manamgatic":     "Attacks with Spell Type by Mage, Sorcerer, Mystic, Vitalist, Enchanter, Summoner, or Artificer classes gain +2 PW. These models also gain +1 SPD.",
+  "Mountainous":    "Models move through at half SPD. Does not affect Flicker or Flying models.",
+  "Profane Miasma": "Ranged Attacks from outside cannot target models inside. Ranged Attacks from within suffer halved Attack modifier. Melee Attacks outside Base Contact suffer −3 modifier. At End Phase, models within or in contact suffer a PW 10 hit with Ignore Armor and Weakening. Does not affect Affinity (Profane) or Elemental Essence (Profane) models.",
+  "Sacred Ground":  "During Strategic Phase, model may Recover 1 HP or Remove one State. If Incapacitated, a successful Morale roll is required. Models with Affinity (Profane), Elemental Essence (Profane), or Undead instead suffer: 1 Wound on contact, −1 HP per Strategic Phase, and are immediately Dead if Incapacitated.",
+  "Scorching":      "During Strategic Phase, models with ARM more than 1 must perform a T roll with −ARM modifier. On failure, the model becomes Fatigued.",
+  "Swamp":          "At the start of its Activation, the model must perform an AG roll. On failure, it cannot move.",
+  "Toxic":          "During the Strategic Phase, the model must perform a Toughness roll. On failure, it suffers 1 Wound.",
+  "Unscalable":     "Only models with the Climbing Skill can move across this environment. Does not affect Flicker or Flying models.",
+};
+
+// ── TOOLTIP MODAL ─────────────────────────────────────────────────────────────
+(function buildModal(){
+  const modal = document.createElement('div');
+  modal.id = 'glossary-modal';
+  modal.style.cssText = `
+    display:none;position:fixed;inset:0;z-index:9999;
+    background:rgba(0,0,0,0.55);
+    align-items:center;justify-content:center;
+    padding:20px;
+  `;
+  modal.innerHTML = `
+    <div id="glossary-modal-box" style="
+      background:var(--bg-right);
+      border:1px solid var(--border-gold);
+      border-radius:8px;
+      max-width:480px;width:100%;
+      padding:20px 22px 18px;
+      box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      position:relative;
+    ">
+      <div id="glossary-modal-term" style="
+        font-family:'Cinzel',serif;font-size:1rem;
+        color:var(--gold);margin-bottom:8px;letter-spacing:1px;
+      "></div>
+      <div id="glossary-modal-desc" style="
+        font-size:0.929rem;color:var(--text-secondary);line-height:1.7;
+      "></div>
+      <button onclick="closeGlossary()" style="
+        position:absolute;top:12px;right:14px;
+        background:none;border:none;cursor:pointer;
+        font-size:1.1rem;color:var(--text-dim);
+        -webkit-tap-highlight-color:transparent;
+      ">✕</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){
+    if(e.target === modal) closeGlossary();
+  });
+})();
+
+function openGlossary(term){
+  const desc = GLOSSARY[term] || CLASS_DESC[term] || CLASS_DESC[term.toUpperCase()] || ITEM_CAT_DESC[term] || ITEM_CAT_DESC[term.toUpperCase()];
+  if(!desc) return;
+  document.getElementById('glossary-modal-term').textContent = term;
+  document.getElementById('glossary-modal-desc').textContent = desc;
+  const modal = document.getElementById('glossary-modal');
+  modal.style.display = 'flex';
+}
+function closeGlossary(){
+  document.getElementById('glossary-modal').style.display = 'none';
+}
+
+// ── MARK TERMS ────────────────────────────────────────────────────────────────
+const GLOSSARY_TERMS_SORTED = Object.keys(GLOSSARY).sort((a,b)=>b.length-a.length);
+
+function markTerms(text){
+  const terms = GLOSSARY_TERMS_SORTED;
+  if(!text) return '';
+  // Escape HTML first
+  let safe = String(text)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  // Replace known terms with tappable spans
+  // Use a placeholder approach to avoid double-replacing
+  const placeholders = {};
+  let idx = 0;
+
+  for(const term of terms){
+    // Match whole word / phrase, case-insensitive
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const re = new RegExp(`(?<![\\w-])(${escaped})(?![\\w-])`, 'gi');
+    safe = safe.replace(re, (match) => {
+      const key = `\x00GLOSS${idx++}\x00`;
+      const safeMatch = match.replace(/'/g, "\\'");
+      const safeTerm = term.replace(/'/g, "\\'");
+      placeholders[key] = `<span class="glossary-term" data-toggle="glossary" data-term="${term}">${match}</span>`;
+      return key;
+    });
+  }
+
+  // Restore placeholders
+  for(const [key, val] of Object.entries(placeholders)){
+    safe = safe.replace(key, val);
+  }
+  return safe;
+}
+
+// ── GLOSSARY EVENT IN DELEGATOR ───────────────────────────────────────────────
+// (Registered inside the existing click delegator)
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 updateHeader();
