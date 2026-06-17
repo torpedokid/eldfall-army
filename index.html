@@ -649,8 +649,10 @@ function totalPts(){
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
+let _currentFaction = 'Sand Kingdoms';
+
 function updateHeader(){
-  document.getElementById('header-faction').textContent = 'Sand Kingdoms · Army Viewer';
+  document.getElementById('header-faction').textContent = _currentFaction + ' · Army Viewer';
   document.getElementById('header-pts').textContent = totalPts()+' pts';
   const count = ARMY.length;
   document.getElementById('roster-header').textContent =
@@ -1016,7 +1018,7 @@ function parseSpellGroup(sp){
 
 function parseArmy(data){
   const chars = data.armyCharacterList || [];
-  const factionRaw = chars[0]?.attributes?.factions?.data?.[0]?.attributes?.name || 'Unknown';
+  const factionRaw = data.faction?.attributes?.name || chars[0]?.attributes?.factions?.data?.[0]?.attributes?.name || 'Unknown';
   const totalPts = data.armyPts || chars.reduce((s,c)=>{
     const upgCost = (c.attributes.appliedArmyCharacterUpgrades||[])
       .reduce((u,upg)=>u+(upg.upgrade?.attributes?.cost||0),0);
@@ -1131,10 +1133,10 @@ function loadArmyFromJSON(jsonData){
     summonedCreatures.length = 0;
     selected = null;
     _armyPtsFromJSON = parsed.totalPts;
+    _currentFaction = parsed.faction;
 
     // Update header faction
-    document.getElementById('header-faction').textContent =
-      parsed.faction + ' · Army Viewer';
+
     document.getElementById('detail-panel').innerHTML =
       '<div class="empty-state"><p>⚔ Select a fighter</p></div>';
 
