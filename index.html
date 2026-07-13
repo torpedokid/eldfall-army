@@ -803,6 +803,40 @@ const ITEM_CAT_DESC = {
 };
 
 // ── COMBAT ARTS FULL DATA ────────────────────────────────────────────────────
+// ── SKILLS & TRAITS WITH MULTIPLE LEVELS ──────────────────────────────────────
+// Per rulebook p.10: "Some Skills can have more than one level... automatically
+// grants access to all lower levels... Effects stack." Same rule applies to
+// Traits like Resourceful. This mirrors the Combat Arts level-stacking logic.
+const LEVELED_SKILLS = {
+  "Charm": [
+    {level:1, name:"Charm I",  desc:"An enemy declaring Reaction against this model must first perform an INT roll. On a failed roll, it may only declare Nothing (Action) until the end of the Activation Sequence."},
+    {level:2, name:"Charm II", desc:"On a failed INT roll, it must also Walk toward this model for its full SPD (if able) at the end of the Activation Sequence."},
+  ],
+  "Infiltration": [
+    {level:1, name:"Infiltration I",  desc:"During the Deployment Phase: Deploy this model up to the middle line of your half of the field."},
+    {level:2, name:"Infiltration II", desc:"During the Deployment Phase: Deploy this model anywhere outside the opponent's Deployment Zone."},
+  ],
+  "Stealth": [
+    {level:1, name:"Stealth I",  desc:"If this model activates or enters an enemy's Awareness, that enemy cannot declare a Reaction unless it has LoS to this model."},
+    {level:2, name:"Stealth II", desc:"Deploy this model in Shrouded (State). If no enemy has LoS, it may re-enter Shrouded during its Strategic Phase."},
+  ],
+  "Resourceful": [
+    {level:1, name:"Resourceful I",  desc:"This model may receive 1 additional Upgrade."},
+    {level:2, name:"Resourceful II", desc:"This model may receive another additional Upgrade."},
+  ],
+  "Poison": [
+    {level:1, name:"Poison I",  desc:"If a model suffers a Wound with this Trait, it becomes Weakened until its next Strategic Phase."},
+    {level:2, name:"Poison II", desc:"If a model suffers a Wound with this Trait, it becomes Weakened and Poisoned."},
+  ],
+  "Sweep": [
+    {level:1, name:"Sweep I",  desc:"On a successful Attack roll, all models within this model's LoS and Melee Weapon Reach also suffer a Hit."},
+    {level:2, name:"Sweep II", desc:"This model's Front arc becomes 360° for the Activation Sequence, and all models within Melee Reach and LoS suffer a Hit."},
+  ],
+  "Inspiring": [
+    {level:1, name:"Inspiring I", desc:"Other allied models within this model's Awareness and with the same Affiliation gain +6 M."},
+  ],
+};
+
 const COMBAT_ARTS = {
   "Assassination": [
     {level:1, name:"Aiming for the Vitals",    desc:"User's Attack gains +6 Power."},
@@ -831,6 +865,8 @@ const COMBAT_ARTS = {
     {level:4, name:"Mortal Wound",     desc:"User's Melee Attack gains Cleave."},
   ],
 };
+// Alias for a common JSON typo ("Assasination" with one 's')
+COMBAT_ARTS["Assasination"] = COMBAT_ARTS["Assassination"];
 
 // ── EVENT DELEGATION para acordeones (evita problemas con comillas en template literals) ──
 document.addEventListener('click', function(e){
@@ -1248,22 +1284,38 @@ function renderDetail(c){
     </div>`;
   }).join('');
 
-  // Skills
-  const skillsHTML = c.skills.map(s=>`
-    <div class="item-card">
+  // Skills — si tiene múltiples niveles (ej. "Stealth 2"), mostrar todos los niveles hasta el asignado
+  const skillsHTML = c.skills.map(s=>{
+    const m = s.name.match(/^(.+?)\s+(\d+)$/);
+    const base = s.group || (m ? m[1] : null);
+    const maxLevel = s.level || (m ? parseInt(m[2]) : null);
+    const levelData = base ? LEVELED_SKILLS[base] : null;
+    if(!levelData || !maxLevel){
+      return `<div class="item-card">
       <div class="item-name">${s.name}</div>
       <div class="item-desc">${markTerms(s.desc)}</div>
-    </div>`).join('');
+    </div>`;
+    }
+    const levels = levelData.filter(l=>l.level<=maxLevel);
+    const levelsHTML = levels.map(l=>`
+      <div class="item-card" style="margin-bottom:6px;${l.level<maxLevel?'opacity:0.65':''}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-family:'Cinzel',serif;font-size:0.643rem;color:var(--text-dim);min-width:16px">${['I','II','III','IV','V'][l.level-1]}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.857rem;color:var(--text-primary)">${base}</span>
+          ${l.level===maxLevel?'<span style="font-size:0.600rem;color:var(--gold);margin-left:4px">★</span>':''}
+        </div>
+        <div class="item-desc">${markTerms(l.desc)}</div>
+      </div>`).join('');
+    return `<div style="margin-bottom:10px">${levelsHTML}</div>`;
+  }).join('');
 
-  // Combat Arts — todos los niveles hasta el asignado, con acordeón por nivel
+  // Combat Arts — todos los niveles hasta el asignado
   const artsHTML = c.arts.map((a,ai)=>{
-    // Extraer nombre base y nivel del string "Fencing 2" → {base:"Fencing", level:2}
     const m = a.name.match(/^(.+?)\s+(\d+)$/);
-    if(!m) return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${markTerms(a.desc)}</div></div>`;
-    const base = m[1];
-    const maxLevel = parseInt(m[2]);
-    const artData = COMBAT_ARTS[base];
-    if(!artData){
+    const base = a.group || (m ? m[1] : null);
+    const maxLevel = a.level || (m ? parseInt(m[2]) : null);
+    const artData = base ? COMBAT_ARTS[base] : null;
+    if(!artData || !maxLevel){
       return `<div class="item-card crimson-left"><div class="item-label">Combat Art</div><div class="item-name">${a.name}</div><div class="item-desc">${markTerms(a.desc)}</div></div>`;
     }
     const levelsHTML = artData.filter(l=>l.level<=maxLevel).map(l=>{
@@ -1283,12 +1335,30 @@ function renderDetail(c){
     </div>`;
   }).join('');
 
-  // Traits
-  const traitsHTML = c.traits.map(t=>`
-    <div class="item-card purple-left">
+  // Traits — algunos también tienen múltiples niveles (Resourceful, Poison, Sweep, Inspiring...)
+  const traitsHTML = c.traits.map(t=>{
+    const m = t.name.match(/^(.+?)\s+(\d+)$/);
+    const base = t.group || (m ? m[1] : null);
+    const maxLevel = t.level || (m ? parseInt(m[2]) : null);
+    const levelData = base ? LEVELED_SKILLS[base] : null;
+    if(!levelData || !maxLevel){
+      return `<div class="item-card purple-left">
       <div class="item-name">${t.name}</div>
       <div class="item-desc">${markTerms(t.desc)}</div>
-    </div>`).join('');
+    </div>`;
+    }
+    const levels = levelData.filter(l=>l.level<=maxLevel);
+    const levelsHTML = levels.map(l=>`
+      <div class="item-card purple-left" style="margin-bottom:6px;${l.level<maxLevel?'opacity:0.65':''}">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-family:'Cinzel',serif;font-size:0.643rem;color:var(--profane-dim);min-width:16px">${['I','II','III','IV','V'][l.level-1]}</span>
+          <span style="font-family:'Cinzel',serif;font-size:0.857rem;color:var(--text-primary)">${base}</span>
+          ${l.level===maxLevel?'<span style="font-size:0.600rem;color:var(--profane-dim);margin-left:4px">★</span>':''}
+        </div>
+        <div class="item-desc">${markTerms(l.desc)}</div>
+      </div>`).join('');
+    return `<div style="margin-bottom:10px">${levelsHTML}</div>`;
+  }).join('');
 
   // Upgrades
   const upgradesHTML = (c.upgrades||[]).map(u=>`
@@ -1417,7 +1487,7 @@ function getTraitName(t){
 }
 
 function getTraitDesc(t){
-  return t.trait?.data?.attributes?.description || '';
+  return cleanEffect(t.trait?.data?.attributes?.description || '');
 }
 
 function getAffinities(traits){
@@ -1479,18 +1549,24 @@ function parseArmy(data){
     // Skills — description may be in attributes.description or attributes.desc
     const skills = a.skills.data.map(s=>{
       const sa = s.attributes;
+      const group = sa.skill_group?.data?.attributes?.name || null;
       return {
         name: sa.name__ || '?',
-        desc: sa.description || sa.desc || '',
+        desc: cleanEffect(sa.description || sa.desc || ''),
+        group: group,
+        level: sa.level || null,
       };
     });
 
     // Combat Arts
     const arts = a.combat_arts.data.map(s=>{
       const sa = s.attributes;
+      const group = sa.combat_art_group?.data?.attributes?.name || null;
       return {
         name: sa.name__ || '?',
-        desc: sa.description || sa.desc || '',
+        desc: cleanEffect(sa.description || sa.desc || ''),
+        group: group,
+        level: sa.level || null,
       };
     });
 
@@ -1498,6 +1574,8 @@ function parseArmy(data){
     const traitList = traits.map(t=>({
       name: getTraitName(t),
       desc: getTraitDesc(t),
+      group: t.trait?.data?.attributes?.trait_group?.data?.attributes?.name || null,
+      level: t.trait?.data?.attributes?.level || null,
     })).filter(t=>t.name && t.name !== '?');
 
     // Weapons
@@ -1527,7 +1605,7 @@ function parseArmy(data){
     // Upgrades
     const upgrades = (a.appliedArmyCharacterUpgrades || []).map(u=>{
       const ua = u.upgrade.attributes;
-      return { name: ua.name || '?', cost: ua.cost || 0, desc: ua.description || '' };
+      return { name: ua.name || '?', cost: ua.cost || 0, desc: cleanEffect(ua.description || '') };
     });
 
     // Stratagems
@@ -1754,13 +1832,44 @@ function exportPDF(){
       y+=2;
     }
 
+    // ── Leveled Skill/Trait (e.g. Stealth II, Resourceful II) — mirrors Combat Art logic ──
+    function getLeveledInfo(item){
+      const m = item.name.match(/^(.+?)\s+(\d+)$/);
+      const base = item.group || (m ? m[1] : null);
+      const maxLv = item.level || (m ? parseInt(m[2]) : null);
+      const levelData = base ? LEVELED_SKILLS[base] : null;
+      if(!levelData || !maxLv) return null;
+      return { base, levels: levelData.filter(l=>l.level<=maxLv), maxLv };
+    }
+    function leveledItemH(item, maxW){
+      const info = getLeveledInfo(item);
+      if(!info) return itemH(item, maxW);
+      let h=5;
+      for(const l of info.levels){ h+=5; h+=linesH(l.desc,maxW-7,LHSM-0.3,6.5)+1; }
+      return h+2;
+    }
+    function drawLeveledItem(item, x, maxW, color){
+      const info = getLeveledInfo(item);
+      if(!info){ drawItem(item.name, item.desc, x, maxW, color); return; }
+      sf('bold',7,color||DGRAY); doc.text(info.base,x,y+3.5); y+=6.5;
+      for(const l of info.levels){
+        const active = l.level===info.maxLv;
+        const rn=['I','II','III','IV','V'][l.level-1];
+        sf('bold',7,active?(color||DGRAY):MGRAY);
+        doc.text(`${rn}  ${info.base}${active?' ★':''}`,x+3,y+3.5); y+=6.5;
+        const lines=doc.splitTextToSize(l.desc,maxW-7);
+        sf('normal',6.5,MGRAY); doc.text(lines,x+6,y); y+=lines.length*(LHSM-0.3)+1;
+      }
+      y+=2;
+    }
+
     // ── markTerms for HTML rendering ──
     function mt(text){ return markTerms(text); }
 
     // ── Combat art (all levels) ──
     function combatArtH(a, maxW){
       const m=a.name.match(/^(.+?)\s+(\d+)$/);
-      const base=m?m[1]:a.name, maxLv=m?parseInt(m[2]):1;
+      const base=a.group||(m?m[1]:a.name), maxLv=a.level||(m?parseInt(m[2]):1);
       const levels=(COMBAT_ARTS[base]||[]).filter(l=>l.level<=maxLv);
       if(!levels.length) return 8;
       let h=5; // group label
@@ -1769,7 +1878,7 @@ function exportPDF(){
     }
     function drawCombatArt(a, x, maxW){
       const m=a.name.match(/^(.+?)\s+(\d+)$/);
-      const base=m?m[1]:a.name, maxLv=m?parseInt(m[2]):1;
+      const base=a.group||(m?m[1]:a.name), maxLv=a.level||(m?parseInt(m[2]):1);
       const levels=(COMBAT_ARTS[base]||[]).filter(l=>l.level<=maxLv);
       if(!levels.length){ sf('bold',7.5,CRIM); doc.text(a.name,x,y+3.5); y+=8; return; }
       sf('bold',7,CRIM); doc.text(base.toUpperCase(),x,y+3.5); y+=6.5;
@@ -1906,7 +2015,7 @@ function exportPDF(){
         const sStartY=yR;
         yR=sectionBar('Skills',xR,yR,COL2,STONE);
         for(const s of c.skills){
-          y=yR; drawItem(s.name,s.desc,xR+PAD,COL2-PAD*2,DGRAY); yR=y;
+          y=yR; drawLeveledItem(s,xR+PAD,COL2-PAD*2,DGRAY); yR=y;
         }
         yR+=1;
         setDraw(STONE,0.2); doc.roundedRect(xR,sStartY,COL2,yR-sStartY,CORNER,CORNER,'S');
@@ -1930,7 +2039,7 @@ function exportPDF(){
         const tStartY=yR;
         yR=sectionBar('Traits',xR,yR,COL2,PURP);
         for(const t of c.traits){
-          y=yR; drawItem(t.name,t.desc,xR+PAD,COL2-PAD*2,PURP); yR=y;
+          y=yR; drawLeveledItem(t,xR+PAD,COL2-PAD*2,PURP); yR=y;
         }
         yR+=1;
         setDraw(PURP,0.2); doc.roundedRect(xR,tStartY,COL2,yR-tStartY,CORNER,CORNER,'S');
