@@ -1239,9 +1239,7 @@ function renderDetail(c){
   }).join('');
 
   // Inventory
-  const usedWgt = c.weapons.reduce((s,w)=>{
-    const v=parseFloat(w.WGT); return s+(isNaN(v)?0:v);
-  },0);
+  const usedWgt = c.weapons.reduce((s,w)=>s+itemWeightContribution(w),0);
   const invSpace = c.inventorySpace||'?';
   const invOver = typeof invSpace==='number'&&usedWgt>invSpace;
   const invHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-family:'Cinzel',serif;font-size:0.714rem;letter-spacing:1px">
@@ -1512,6 +1510,17 @@ function cleanEffect(text){
   return String(text).replace(/\(([^)]+)\)\[[^\]]+\]/g, '$1').trim();
 }
 
+// Peso que aporta un item al Inventario, según las reglas del juego (p.13):
+// "WGT se multiplica por QTY, salvo que WGT sea 0 — en ese caso solo cuenta QTY."
+// Items con WGT "/" no ocupan espacio en absoluto (armas naturales, etc.)
+function itemWeightContribution(w){
+  if(w.WGT === '/' || w.WGT == null) return 0;
+  const wgtNum = parseFloat(w.WGT);
+  if(isNaN(wgtNum)) return 0;
+  const qty = w.qty || 1;
+  return wgtNum === 0 ? qty : wgtNum * qty;
+}
+
 function parseWeaponMode(w){
   const modeObj = w.attack_mode;
   if(typeof modeObj === 'string') return modeObj;
@@ -1587,7 +1596,7 @@ function parseArmy(data){
       return {
         name: w.name || '?',
         mode: mode,
-        qty: 1,
+        qty: item.QTY != null ? item.QTY : 1,
         PW: w.PW || '-',
         RCH: w.RCH || '-',
         STK: w.STK || '-',
@@ -1803,7 +1812,8 @@ function exportPDF(){
       return h+1.5;
     }
     function drawWeapon(w, x, maxW){
-      sf('bold',8,DGRAY); doc.text(w.name, x, y+3.5);
+      const nameStr = w.name + (w.qty>1 ? ` ×${w.qty}` : '');
+      sf('bold',8,DGRAY); doc.text(nameStr, x, y+3.5);
       const mode=w.mode||'MELEE';
       const mc=mode==='RANGED'?TEAL:mode==='NATURAL'?STONE:CRIM;
       const bw=tw(mode)+3;
@@ -1967,7 +1977,7 @@ function exportPDF(){
 
       // Inventory
       if(c.inventorySpace){
-        const used=c.weapons.reduce((s,w)=>{const v=parseFloat(w.WGT);return s+(isNaN(v)?0:v);},0);
+        const used=c.weapons.reduce((s,w)=>s+itemWeightContribution(w),0);
         const over=used>c.inventorySpace;
         sf('normal',7,over?CRIM:MGRAY);
         doc.text(`Inventory: ${used} / ${c.inventorySpace} wgt${over?' ⚠ OVER-ENCUMBERED':''}`, ML, y+3.5);
